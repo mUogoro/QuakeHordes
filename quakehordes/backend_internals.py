@@ -8,7 +8,7 @@ from numpy import *
 class Brush(object):
         
     def __init__(self, _id, material=None, planes=None):
-        self.id = id
+        self.id = _id
         if material is None:
             self.material = "NULL"
         else:
@@ -81,7 +81,22 @@ class MovableEntity(object):
                           [0, 0, 0, 1]])
         self.pos = dot(self.pos, transMat)
 
-    
+
+
+class Door(Brush):
+
+    def __str__(self):
+        retVal = '''
+{
+"classname" "func_door"
+"targetname" "%s"
+"angle" "90"
+"wait" "-1"
+''' % self.id
+        retVal += super(Door, self).__str__()
+        retVal += '\n}\n'
+        return retVal
+
 
 class Player(MovableEntity):
 
@@ -94,12 +109,11 @@ class Player(MovableEntity):
 
 
 
-# TODO: allow more triggers
-class HordeTrigger(MovableEntity):
+class Trigger(MovableEntity):
 
     def __init__(self, _id, x=None, y=None, z=None,
                  isCounter=False, count=0):
-        super(HordeTrigger, self).__init__(_id, x, y, z)
+        super(Trigger, self).__init__(_id, x, y, z)
         self.brush = Brush(self.id+"_brush",
                            material="grass")
         self.isCounter = isCounter
@@ -107,7 +121,7 @@ class HordeTrigger(MovableEntity):
 
 
     def translate(self, x, y, z):
-        super(HordeTrigger, self).translate(x, y, z)
+        super(Trigger, self).translate(x, y, z)
         self.brush.translate(x, y, z)
 
 
@@ -124,7 +138,7 @@ class HordeTrigger(MovableEntity):
 "classname" "trigger_counter"
 "origin" "%d %d %d"
 "target" "%s_trigger"
-"targetname" "%s_trigger_next"
+"targetname" "%s_fire"
 "spawnflags" "1"
 "count" "%d"
 }
@@ -132,6 +146,28 @@ class HordeTrigger(MovableEntity):
        self.id, self.id, self.count)
         return retVal
 
+
+class ChangeLevelTrigger(MovableEntity):
+
+    def __init__(self, _id, x=None, y=None, z=None):
+        super(ChangeLevelTrigger, self).__init__(_id,
+                                                 x, y, z)
+        self.brush = Brush(self.id+"_brush")
+
+
+    def translate(self, x, y, z):
+        super(ChangeLevelTrigger, self).translate(x, y, z)
+        self.brush.translate(x, y, z)
+
+
+    def __str__(self):
+        retVal = '''{
+"classname" "trigger_changelevel"
+"map" "%s"
+%s
+}
+''' % (self.id, str(self.brush))
+        return retVal
 
 
 class MonsterTrigger(MovableEntity):
@@ -204,10 +240,10 @@ class MonsterEntity(MovableEntity):
 
     def __init__(self, _id, _type, 
                  x=None, y=None, z=None,
-                 hordeFired=None):
+                 target=None):
         super(MonsterEntity, self).__init__(_id, x, y, z)
         self.type = _type
-        self.hordeFired = hordeFired
+        self.target = target
     
 
     def __str__(self):
@@ -215,9 +251,9 @@ class MonsterEntity(MovableEntity):
 "classname" "monster_%s"
 "origin" "%s %s %s"
 "spawnflags" "1"
-"target" "%s_trigger_next"
+"target" "%s"
 }
 ''' % (self.type, self.pos[0], self.pos[1], self.pos[2],
-       self.hordeFired)
+       self.target)
         return retVal
 

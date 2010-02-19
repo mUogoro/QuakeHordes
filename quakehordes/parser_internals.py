@@ -8,33 +8,35 @@ import traceback
 import operator
 
 # Defined types
-# TODO: defines basic types to? (maybe useful for type checking... >_>)
 TYPES = {'Map': {'name':'string',
                  'introMessage':'string',
                  'difficult':'string',
                  'width':'int',
                  'height':'int',
+                 'players':'Player[]',
                  'next':'Map',
                  'hordes':'Horde[]'},
          'Horde':{'id':'string',
-                  'x':'int','y':'int',
+                  'x':'int','z':'int',
                   'delay':'real',
                   'fireX':'int',
-                  'fireY':'int',
+                  'fireZ':'int',
                   'message':'string',
                   'monsters':'Monster[]',
                   'next':'Horde'},
          'Monster':{'id':'string',
                     'type':'string'},
          'Player':{'x':'int',
-                   'y':'int'}}
+                   'z':'int'}}
 
 
+# Defined methods (work only on lists) 
 METHODS = {'add':getattr(list, 'append'),
            'remove':getattr(list, 'remove'),
            'index':getattr(list, 'index')}
 
 
+# Symbol class
 class Symbol(object):
 
     def __init__(self, _id, _type, value, dim=None):
@@ -44,6 +46,7 @@ class Symbol(object):
         self.value = value
 
 
+# Class used for implement scopes
 class Env(object):
 
     def __init__(self):
@@ -88,18 +91,83 @@ class Env(object):
             except Exception:
                 i-=1
                 continue
-        raise AttributeError("Not found %s" % name)
-                
+        raise KeyError("Not found %s" % name)
+
+    # TODO: remove?
     def restore(self, scope):
         while self.currScope != scope:
             self.pop()
 
 
+# Exceptions raised for execution errors
+class HDLTypeError(Exception):
+
+    def __init__(self, typeFound, typeExpected,
+                 lineno, linepos):
+        super(HDLTypeError, self).__init__()
+        self.typeFound = typeFound
+        self.typeExpected = typeExpected
+        self.lineno = lineno
+        self.linepos = linepos
+
+
+    def __str__(self):
+        return "Invalid type on %d:%d: expected %s, found %s" % \
+            (self.lineno, self.linepos,
+             self.typeExpected, self.typeFound)
+
+
+class HDLAttrError(Exception):
+
+    def __init__(self, _type, attrName, lineno, linepos):
+        super(HDLAttrError, self).__init__()
+        self.type = _type
+        self.attrName = attrName
+        self.lineno = lineno
+        self.linepos = linepos
+
+
+    def __str__(self):
+        return "Invalid attribute on %d:%d: type %s has no attribute %s" % \
+            (self.lineno, self.linepos,
+             self.type, self.attrName)
+
+
+class HDLIndexError(Exception):
+
+    def __init__(self, index, lineno, linepos):
+        super(HDLIndexError, self).__init__()
+        self.index = index
+        self.lineno = lineno
+        self.linepos = linepos
+        
+
+    def __str__(self):
+        return "Invalid index on %d:%d" % \
+            (self.lineno, self.linepos)
+
+
+class HDLNameError(Exception):
+
+    def __init__(self, name, lineno, linepos):
+        super(HDLNameError, self).__init__()
+        self.name = name
+        self.lineno = lineno
+        self.linepos = linepos
+
+    
+    def __str__(self):
+        return "Name error on %d:%d: no variable %s declared" % \
+            (self.lineno, self.linepos, self.name)
+
+
+
+# Abstract Syntax Tree nodes definition
 class AstNode(object):
 
-    def __init__(self, lineNo, linePos, childs=None):
-        self.lineNo = lineNo
-        self.linePos = linePos
+    def __init__(self, lineno, linepos, childs=None):
+        self.lineno = lineno
+        self.linepos = linepos
         if childs is not None:
             self.childs = childs
         else:
@@ -108,6 +176,10 @@ class AstNode(object):
     def action(self, scope):
         for child in self.childs:
             child.action(scope)
+
+
+class ProgramNode(AstNode):
+    pass
 
 
 class DeclNode(AstNode):
@@ -143,8 +215,14 @@ class AssignNode(AstNode):
         rvalNode = self.childs[1]
         lval = lvalNode.action(scope)
         rval = rvalNode.action(scope)
+
         # Assignment as simple symbol-value copy
-        lval.value = rval.value
+        if lval.type == rval.type:
+            lval.value = rval.value
+        else:
+            raise HDLTypeError(rval.type, lval.type,
+                               rvalNode.lineno,
+                               rvalNode.linepos)
 
 
 class LvalNode(AstNode):
@@ -153,8 +231,6 @@ class LvalNode(AstNode):
         varNode = self.childs[0]
         var = varNode.action(scope)
         val = var
-
-        # Here a symbol must be returned!!!
         return val
 
 
@@ -186,15 +262,35 @@ class VarNode(AstNode):
     def action(self, scope):
         varName = self.childs[0]
         varOffset = self.childs[1]
-        val = scope.search(varName)
+        try:
+            val = scope.search(varName)
+        except KeyError, e:
+            raise HDLNameError(varName, 
+                               self.lineno,
+                               self.linepos)
+
         if varOffset is not None:
-            val = val.value[varOffset]
+            try:
+                if varOffset >= 0:
+                    val = val.value[varOffset]
+                else:
+                    raise IndexError()
+            except IndexError, e:
+                raise HDLIndexError(varOffset,
+                                    self.lineno,
+                                    self.linepos+len(varName)+1)
 
         # Perform attribute lookup
         if self.childs[2] is not None:
             scope.push(val.value)
             attr = self.childs[2]
-            val = attr.action(scope)
+            try:
+                val = attr.action(scope)
+            except KeyError, e:
+                raise HDLAttrError(val.type,
+                                   attr.childs[0],
+                                   attr.lineno,
+                                   attr.linepos)
             scope.pop()
 
         return val
@@ -208,13 +304,27 @@ class AttrNode(AstNode):
         # Get attrName symbol from current scope
         val = scope.get(attrName)
         if attrOffset is not None:
-            val = val.value[attrOffset]
+            try:
+                if attrOffset >= 0:
+                    val = val.value[attrOffset]
+                else:
+                    raise IndexError()
+            except IndexError, e:
+                raise HDLIndexError(attrOffset,
+                                    self.lineno,
+                                    self.linepos+len(attrName)+1)
 
         if self.childs[2] is not None:
             # Perform next attribute lookup
             scope.push(val.value)
             attr = self.childs[2]
-            val = attr.action(scope)
+            try:
+                val = attr.action(scope)
+            except KeyError, e:
+                raise HDLAttrError(val.type,
+                                   attr.childs[0],
+                                   attr.lineno,
+                                   attr.linepos)
             # Restore the scope
             scope.pop()
         
@@ -227,17 +337,34 @@ class MethodCallNode(AstNode):
         methName = self.childs[0]
         methVar = self.childs[1][0]
         methArgs = self.childs[2]
-        methVar.action(scope)
+        #methVar.action(scope)
         # Retrieve the function
         method = METHODS[methName]
         # Retrieve the variable symbol
         var = methVar.action(scope)
         # Retrive the args
-        args = [attr[0].action(scope) for attr in methArgs]
+        #args = [attr[0].action(scope) for attr in methArgs]
+        # TODO: perform number-of-arguments checks???
+        args = []
+        for arg in methArgs:
+            arg = arg[0]
+            argSym = arg.action(scope)
+            if argSym.type != var.type[:-2]:
+                raise HDLTypeError(argSym.type, var.type,
+                                   arg.lineno, arg.linepos)
+            args.append(argSym)
         # Finally, call the method
         return method(var.value,
                       *[arg for arg in args])
     
+
+class PrintNode(AstNode):
+
+    def action(self, scope):
+        rval = self.childs[0]
+        sym = rval.action(scope)
+        print sym.value 
+
 
 class ForNode(AstNode):
 

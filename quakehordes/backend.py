@@ -22,16 +22,134 @@ class Map(object):
         self.brushes = []
         self.players = []
         self.hordes = []
+        self.exitTrigger = None
+        self.exit = []
 
 
     def validate(self):
         return True
 
+    
+    def _buildCage(self):
+        self.cage = []
+        exitSize = 60
+        # Build floor
+        floorA = Brush('floorA')
+        floorA.scale(self.width/2-exitSize, self.height, 1)
+        
+        floorB = Brush('floorB')
+        floorB.scale(self.width/2-exitSize, self.height, 1)
+        floorB.translate(self.width/2+exitSize, 0, 0)
 
-    def setup(self):
-        self.brushes.append(Brush(self.name+'_main_brush'))
+        floorC = Brush('floorC')
+        floorC.scale(exitSize*2, self.height/2-exitSize, 1)
+        floorC.translate(self.width/2-exitSize, 0, 0)
+        
+        floorD = Brush('floorD')
+        floorD.scale(exitSize*2, self.height/2-exitSize, 1)
+        floorD.translate(self.width/2-exitSize,
+                         self.height/2+exitSize, 0)
+
+        self.cage.extend([floorA, floorB, floorC, floorD])
+
+
+        # Build walls bars
+        step = 30
+        barWidth = 10
+        barHeight = 10
+        barLenght = 300
+        n = 0
+        for i in range(max(self.width, self.height)/step):
+            if n < self.width:
+                brush1a = Brush('cage_0x_'+str(i),
+                                material='wood')
+                brush1a.scale(barWidth, barHeight, barLenght)
+                brush1a.translate(n, 0, 0)
+                brush1b = Brush('cage_yx_'+str(i),
+                                material='wood')
+                brush1b.scale(barWidth, barHeight, barLenght)
+                brush1b.translate(n, self.height, 0)
+                self.cage.append(brush1a)
+                self.cage.append(brush1b)
+            if n < self.height:
+                brush2a = Brush('cage_0y_'+str(i),
+                                material='wood')
+                brush2a.scale(barWidth, barHeight, barLenght)
+                brush2a.translate(0, n, 0)
+                brush2b = Brush('cage_xy_'+str(i),
+                                material='wood')
+                brush2b.scale(barWidth, barHeight, barLenght)
+                brush2b.translate(self.width, n, 0)
+                self.cage.append(brush2a)
+                self.cage.append(brush2b)
+
+            n += step
+            if n > max(self.width, self.height):
+                break
+
+        self.brushes.extend(self.cage)
+            
+
+    def _buildWalls(self):
+        # Build floor
+        self.brushes.append(Brush(self.name+'_main_brush',
+                                  material='grass2'))
         self.mainBrush = self.brushes[0]
         self.mainBrush.scale(self.width, self.height, 1.0)
+
+        # Build walls
+        wall1 = Brush('wall_0x')
+        wall1.scale(self.width, 16, 256)
+        wall2 = Brush('wall_xx')
+        wall2.scale(self.width, 16, 256)
+        wall2.translate(0, self.height, 0)
+        wall3 = Brush('wall_xy')
+        wall3.scale(16, self.height, 256)
+        wall3.translate(self.width, 0, 0)
+        wall4 = Brush('wall_0y')
+        wall4.scale(16, self.height, 256)
+        self.brush.extend([wall1, wall2, wall3, wall4])
+           
+
+    def _buildWallExit(self):
+        pass
+
+
+    def _buildCageExit(self):
+        # Build exit bars
+        k = 20
+        offset = 5
+        exitSize = 60
+        for i in range(0, (exitSize*2) / k):
+            bar = Door('exit_trigger')
+            bar.scale(10, exitSize*2, 10)
+            bar.translate(self.width/2-exitSize+offset,
+                          self.height/2-exitSize,
+                          -10)
+            offset += k
+            self.exit.append(bar)
+
+        # Build changelevel trigger
+        if self.sNext is not None:
+            nextMap = self.sNext.value
+            nextMapName = nextMap['name'].value
+        else:
+            nextMapName = self.name
+
+        chLevelTrig = ChangeLevelTrigger(nextMapName)
+        chLevelTrig.brush.scale(exitSize*4, exitSize*4, 1)
+        chLevelTrig.brush.translate(self.width/2-exitSize,
+                                    self.height/2-exitSize,
+                                    -25)
+        self.exit.append(chLevelTrig)
+                                             
+
+
+    def setup(self):
+        # TODO: better map generation?
+        self._buildCage()
+        self._buildCageExit()
+        #self._buildWalls()
 
         for playerSym in self.sPlayers:
             playerName = self.name + '_player1'
@@ -49,18 +167,35 @@ class Map(object):
             x = 0
             y += 200
             z = -400
-            
+
+            if hordeSym is self.sHordes[-1]:
+                # The last horde activates the 
+                # final-level door
+                lastHorde = True
+            else:
+                lastHorde = False
+
             i = self.sHordes.index(hordeSym)
             if i>0 and \
                     self.sHordes[i-1]['next'].value is not None:
                 count = len(self.sHordes[i-1]['monsters'].value)
                 horde = Horde(hordeSym, self.name, x, y, z,
                               isFired=True,
-                              fireCount=count)
+                              fireCount=count,
+                              fireExit=lastHorde)
             else:
-                horde = Horde(hordeSym, self.name, x, y, z)
+                horde = Horde(hordeSym, self.name, x, y, z,
+                              fireExit=lastHorde)
             horde.setup()
             self.hordes.append(horde)
+
+        # Finally, create exit-door
+        self.exitTrigger = Trigger('exit',
+                                   self.width/2,
+                                   self.height/2,
+                                   isCounter=True,
+                                   count=len(self.sHordes[-1]['monsters'].value))
+        
         
     
     def __str__(self):
@@ -70,14 +205,31 @@ class Map(object):
         retVal += '"classname" "worldspawn"\n'
 
         # Generate main brush
-        retVal += ''.join([str(brush)
-                           for brush in self.brushes])
+        retVal += ''.join([str(brush)+'\n'
+                           for brush in self.brushes])+'\n'
+
+        # Generate cage
+        #retVal += ''.join([str(brush)+'\n'
+        #                   for brush in self.cage])
+        # Generate walls
+        #retVal += ''.join([str(brush)+'\n'
+        #                   for brush in self.walls])
+        
+
         # Generate all hordes support brushes
         retVal += \
             ''.join(['\n// %s support brush\n%s' % 
                      (horde.id, str(horde.supBrush))
                      for horde in self.hordes])
         retVal += '\n}\n'
+
+        # Generate exit doors
+        retVal += \
+            ''.join([str(door)+'\n'
+                     for door in self.exit])
+
+        # Generate exit trigger
+        retVal += str(self.exitTrigger) + '\n'
 
         # Generate hordes
         retVal += \
@@ -96,7 +248,8 @@ class Map(object):
 class Horde(object):
 
     def __init__(self, symbols, mapName, x, y, z,
-                 isFired=False, fireCount=0):
+                 isFired=False, fireCount=0,
+                 fireExit=False):
         self.id = symbols['id'].value
         self.x = symbols['x'].value
         self.z = symbols['z'].value
@@ -112,6 +265,7 @@ class Horde(object):
              for sym in symbols['monsters'].value]
         self.isFired = isFired
         self.fireCount = fireCount
+        self.fireExit = fireExit
 
         self.nMonsters = len(self.sMonsters)
         self.monsters = []
@@ -135,13 +289,14 @@ class Horde(object):
 
         # Create the horde trigger
         if self.isFired:
-            hordeTrigger = HordeTrigger(self.id,
-                                        isCounter=True,
-                                        count=self.fireCount)
+            hordeTrigger = Trigger(self.id,
+                                   self.x, self.z, 10,
+                                   isCounter=True,
+                                   count=self.fireCount)
         else:
-            hordeTrigger = HordeTrigger(self.id)
+            hordeTrigger = Trigger(self.id)
             hordeTrigger.brush.scale(20, 20, 1)
-        hordeTrigger.translate(self.x, self.z, 1)
+            hordeTrigger.translate(self.x, self.z, 1)
         self.hordeTrigger = hordeTrigger
 
         # Create monsters and their destinations
@@ -153,7 +308,9 @@ class Horde(object):
         i = 0
 
         nextHordeName = ''
-        if self.sNext is not None:
+        if self.fireExit:
+            nextHordeName = 'exit'
+        elif self.sNext is not None:
             nextHordeName = self.sNext['id'].value
         for monstSym in self.sMonsters:
             # TODO: compute here monster destination
@@ -163,14 +320,17 @@ class Horde(object):
 
             x = xStep * cos(angle)
             y = yStep * sin(angle)
-            
-            #print "monst:", x, y
 
             angle += angleStep
             if angle >= 2*pi:
                 angle = 0
-                xStep += xStep
-                yStep += yStep
+                #xStep += xStep
+                #yStep += yStep
+                xStep += 80
+                yStep += 80
+                if angleStep != 0:
+                    angleStep -= 0.2
+
 
             # TODO: how to manage monsters with same name
             monstSym['id'].value += str(i)
@@ -227,11 +387,12 @@ class Monster(object):
     def setup(self):
         # Create the monster
         monsterName = '%s_%s' % (self.hordeName, self.id)
-        monster = MonsterEntity(monsterName, self.type,
-                                self.realX+50,
-                                self.realY+50,
-                                self.realZ+25,
-                                self.nextHordeName)
+        monster = \
+            MonsterEntity(monsterName, self.type,
+                          self.realX+50,
+                          self.realY+50,
+                          self.realZ+25,
+                          self.nextHordeName+'_fire')
         self.monstEntity = monster
         # Create monster teleport
         teleport = MonsterTeleport(monsterName)

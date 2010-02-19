@@ -10,8 +10,13 @@ from ply import yacc as yacc
 from lexer import tokens
 from parser_internals import *
 
+
+# Global variables
 ENV = Env()
 
+
+def _retRuleLinepos(p, i):
+    return p.lexpos(i)-p.lexer.startLinePos-1
 
 #************************************
 # Grammar productions definition
@@ -23,7 +28,7 @@ precedence = (('left', 'OR'),
 
 def p_start_rule(p):
     '''start_rule : code_lines'''
-    p[0] = AstNode(0, 0, p[1])
+    p[0] = ProgramNode(0, 0, p[1])
 
 def p_code_lines(p):
     '''code_lines : code_lines code_line
@@ -48,13 +53,15 @@ def p_declaration(p):
         childs = [p[1], p[2], None]
     else:
         childs = [p[1], p[2], 0]
-    p[0] = DeclNode(p.lineno(0), p.lexpos(0), childs)
+    p[0] = DeclNode(p.lineno(0), _retRuleLinepos(p, 0),
+                    childs)
     
     
 
 def p_statement(p):
     '''statement : assign_stmt
                  | methcall_stmt
+                 | print_stmt
                  | for_stmt
                  | if_stmt'''
     p[0] = p[1]
@@ -65,18 +72,24 @@ def p_assign_stmt(p):
     lval = p[1]
     rval = p[2]
     childs = [p[1], p[3]]
-    p[0] = AssignNode(p.lineno(0), p.lexpos(0), childs)
+    #p[0] = AssignNode(p.lineno(0), p.lexpos(0), childs)
+    p[0] = AssignNode(p.lineno(0), _retRuleLinepos(p, 0),
+                      childs)
 
 
 def p_lval(p):
     '''lval : attr_lookup'''
-    p[0] = LvalNode(p.lineno(0), p.lexpos(0), p[1])
+    #p[0] = LvalNode(p.lineno(0), p.lexpos(0), p[1])
+    p[0] = LvalNode(p.lineno(0), 
+                    _retRuleLinepos(p, 0), p[1])
 
 
 def p_rval(p):
     '''rval : const_val
             | attr_lookup'''
-    p[0] = RvalNode(p.lineno(0), p.lexpos(0), p[1])
+    #p[0] = RvalNode(p.lineno(0), p.lexpos(0), p[1])
+    p[0] = RvalNode(p.lineno(0), 
+                    _retRuleLinepos(p, 0), p[1])
 
 
 def p_const_val(p):
@@ -94,13 +107,14 @@ def p_attr_lookup(p):
         varName = p[1]
         varOffset = p[2]
         childs = [varName, varOffset, None]
-        p[0] = [VarNode(p.lineno(0), p.lexpos(0), childs)]
+        p[0] = [VarNode(p.lineno(0),
+                        _retRuleLinepos(p, 0), childs)]
     else:
         attrName = p[3]
         attrOffset = p[4]
         childs = [attrName, attrOffset, None]
-        attrNode = AttrNode(p.lineno(3), p.lexpos(3),
-                             childs)
+        attrNode = AttrNode(p.lineno(3),
+                            _retRuleLinepos(p, 3), childs)
         p[1][-1].childs[-1] = attrNode
         p[1].append(attrNode)
         p[0] = p[1]
@@ -119,9 +133,16 @@ def p_methcall_stmt(p):
     funcName = p[3]
     args = p[5]
     childs = [funcName, var, args]
-    methNode = MethodCallNode(p.lineno(0), p.lexpos(1),
-                              childs)
+    methNode = MethodCallNode(p.lineno(0),
+                              _retRuleLinepos(p, 1), childs)
     p[0] = methNode
+
+
+def p_print_stmt(p):
+    'print_stmt : PRINT rval SEMICOLON'
+    p[0] = PrintNode(p.lineno(0), _retRuleLinepos(p, 0),
+                     [p[2]])
+
 
 def p_for_stmt(p):
     '''for_stmt : for_stmt_start code_lines END FOR'''
@@ -129,8 +150,8 @@ def p_for_stmt(p):
     iterator = p[1][1]
     childs = [iterName, iterator]
     childs.extend(p[2])
-    p[0] = ForNode(p.lineno(0), p.lexpos(0), childs)
-    
+    p[0] = ForNode(p.lineno(0), _retRuleLinepos(p, 0),
+                   childs)
 
 
 def p_for_stmt_start(p):
@@ -156,7 +177,8 @@ def p_if_stmt(p):
         childs = [p[2], p[4], None]
     else:
         childs = [p[2], p[4], p[7]]
-    p[0] = IfNode(p.lineno(0), p.lexpos(0), childs)
+    p[0] = IfNode(p.lineno(0), _retRuleLinepos(p, 0),
+                  childs)
 
 
 def p_cond(p):
@@ -169,24 +191,27 @@ def p_cond(p):
     # TODO: only comparison now
     if len(p) == 2:
         childs = p[1]
-        p[0] = CondNode(p.lineno(0), p.lexpos(0), childs)
+        p[0] = CondNode(p.lineno(0), 
+                        _retRuleLinepos(p, 0), childs)
     elif len(p) == 3:
         op = operator.not_
         childs = [p[2], None, op]
-        p[0] = CondNode(p.lineno(0), p.lexpos(0), childs)
+        p[0] = CondNode(p.lineno(0),
+                        _retRuleLinepos(p, 0), childs)
     elif p[1] == '(':
         p[0] = p[2]
     elif p[2] == 'and':
         op = operator.and_
         childs = [p[1], p[3], op]
-        p[0] = CondNode(p.lineno(0), p.lexpos(0), childs)
+        p[0] = CondNode(p.lineno(0),
+                        _retRuleLinepos(p, 0), childs)
     else:
         op = operator.or_
         childs = [p[1], p[3], op]
-        p[0] = CondNode(p.lineno(0), p.lexpos(0), childs)
+        p[0] = CondNode(p.lineno(0),
+                        _retRuleLinepos(p, 0), childs)
     
         
-
 def p_comparison(p):
     'comparison : rval relop rval'
     if p[2] == '==':
@@ -228,6 +253,7 @@ def p_args(p):
     else:
         p[1].append(p[3])
         p[0] = p[1]
+
 
 def p_arg(p):
     '''arg : attr_lookup'''

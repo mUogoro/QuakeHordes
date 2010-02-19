@@ -5,6 +5,7 @@
 #*************************************************
 from ply import lex as lex
 
+
 # List of tokens used by the language
 reserved = {'if':'IF',
             'else':'ELSE',
@@ -15,7 +16,8 @@ reserved = {'if':'IF',
             'in':'IN',
             'not':'NOT',
             'and':'AND',
-            'or':'OR'}
+            'or':'OR',
+            'print': 'PRINT'}
 
 types = ['Map', 'Horde', 'Monster', 'Player']
 methods = ['add', 'remove', 'index']
@@ -99,6 +101,7 @@ def t_comment(t):
 def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
+    t.lexer.startLinePos = t.lexpos
 
 t_ignore = r' '
 
