@@ -3,8 +3,6 @@
 #
 #*************************************************
 
-#TODO: included only for debug purposes: remove
-import traceback
 import operator
 
 # Defined types
@@ -13,21 +11,25 @@ TYPES = {'Map': {'name':'string',
                  'difficult':'string',
                  'width':'int',
                  'height':'int',
-                 'players':'Player[]',
                  'next':'Map',
-                 'hordes':'Horde[]'},
+                 'players':'Player[]',
+                 'hordes':'Horde[]',
+                 'items': 'Item[]'},
          'Horde':{'id':'string',
-                  'x':'int','z':'int',
+                  'x':'int','y':'int',
                   'delay':'real',
                   'fireX':'int',
-                  'fireZ':'int',
+                  'fireY':'int',
                   'message':'string',
-                  'monsters':'Monster[]',
-                  'next':'Horde'},
+                  'next':'Horde',
+                  'monsters':'Monster[]'},
          'Monster':{'id':'string',
                     'type':'string'},
+         'Item':{'type':'string',
+                 'subType':'string',
+                 'size':'int'},
          'Player':{'x':'int',
-                   'z':'int'}}
+                   'y':'int'}}
 
 
 # Defined methods (work only on lists) 
@@ -70,6 +72,7 @@ class Env(object):
         self.currScope = self.scopes[-2]
         return self.scopes.pop()
 
+
     def add(self, name, obj):
         self.currScope[name] = obj
 
@@ -77,21 +80,22 @@ class Env(object):
     def get(self, name):
         return self.currScope[name]
 
+
     def set(self, name, value):
-        # TODO: where perform type checking?
         self.currScope[name] = value
 
-    def search(self, name):
-        # TODO: better exception 
+
+    def search(self, name): 
         i = len(self.scopes)-1
         while i >= 0:
             tmp = self.scopes[i]
             try:
                 return tmp[name]
-            except Exception:
+            except KeyError:
                 i-=1
                 continue
-        raise KeyError("Not found %s" % name)
+        raise KeyError(name)
+
 
     # TODO: remove?
     def restore(self, scope):
@@ -119,18 +123,25 @@ class HDLTypeError(Exception):
 
 class HDLAttrError(Exception):
 
-    def __init__(self, _type, attrName, lineno, linepos):
+    def __init__(self, _type, attrName, lineno, linepos,
+                 isMethod=False):
         super(HDLAttrError, self).__init__()
         self.type = _type
         self.attrName = attrName
         self.lineno = lineno
         self.linepos = linepos
+        self.isMethod = isMethod
 
 
     def __str__(self):
-        return "Invalid attribute on %d:%d: type %s has no attribute %s" % \
-            (self.lineno, self.linepos,
-             self.type, self.attrName)
+        if not self.isMethod:
+            return "Invalid attribute on %d:%d: type %s has no attribute %s" % \
+                (self.lineno, self.linepos,
+                 self.type, self.attrName)
+        else:
+            return "Invalid method on %d:%d: type %s has no method %s" % \
+                (self.lineno, self.linepos,
+                 self.type, self.attrName)
 
 
 class HDLIndexError(Exception):
@@ -337,33 +348,47 @@ class MethodCallNode(AstNode):
         methName = self.childs[0]
         methVar = self.childs[1][0]
         methArgs = self.childs[2]
-        #methVar.action(scope)
-        # Retrieve the function
-        method = METHODS[methName]
         # Retrieve the variable symbol
         var = methVar.action(scope)
+        # Retrieve the function
+        try:
+            method = METHODS[methName]
+        except KeyError, e:
+            methodLinepos = self.childs[1][-1].linepos + \
+                len(var.id) + 1
+            raise HDLAttrError(var.type, methName,
+                               methVar.lineno,
+                               #methVar.linepos,
+                               methodLinepos,
+                               True)
         # Retrive the args
         #args = [attr[0].action(scope) for attr in methArgs]
         # TODO: perform number-of-arguments checks???
-        args = []
+        #args = []
         for arg in methArgs:
-            arg = arg[0]
             argSym = arg.action(scope)
             if argSym.type != var.type[:-2]:
                 raise HDLTypeError(argSym.type, var.type,
                                    arg.lineno, arg.linepos)
-            args.append(argSym)
+            #args.append(argSym)
+            
+            # and call the method for each arg
+            method(var.value, argSym)
+
         # Finally, call the method
-        return method(var.value,
-                      *[arg for arg in args])
+        #return method(var.value,
+        #              *[arg for arg in args])
     
 
 class PrintNode(AstNode):
 
     def action(self, scope):
-        rval = self.childs[0]
-        sym = rval.action(scope)
-        print sym.value 
+        args = self.childs
+        syms = [val.action(scope) for val in args]
+        outStr = ''.join([str(sym.value)+' '
+                          for sym in syms])[:-1]
+
+        print outStr
 
 
 class ForNode(AstNode):

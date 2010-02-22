@@ -100,11 +100,25 @@ class Door(Brush):
 
 class Player(MovableEntity):
 
+    def __init__(self, _id, x=None, y=None, z=None,
+                 isCoop=False):
+        super(Player, self).__init__(_id, x, y, z)
+        self.isCoop = isCoop
+
+
     def __str__(self):
-        retVal = '''{
+        if not self.isCoop:
+            retVal = '''{
 "classname" "info_player_start"
 "origin" "%d %d %d"
-}''' % (self.pos[0], self.pos[1], self.pos[2])
+}
+''' % (self.pos[0], self.pos[1], self.pos[2])
+        else:
+            retVal = '''{
+"classname" "info_player_coop"
+"origin" "%d %d %d"
+}
+''' % (self.pos[0], self.pos[1], self.pos[2])            
         return retVal
 
 
@@ -114,8 +128,7 @@ class Trigger(MovableEntity):
     def __init__(self, _id, x=None, y=None, z=None,
                  isCounter=False, count=0):
         super(Trigger, self).__init__(_id, x, y, z)
-        self.brush = Brush(self.id+"_brush",
-                           material="grass")
+        self.brush = Brush(self.id+"_brush")
         self.isCounter = isCounter
         self.count = count
 

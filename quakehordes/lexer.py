@@ -19,15 +19,23 @@ reserved = {'if':'IF',
             'or':'OR',
             'print': 'PRINT'}
 
-types = ['Map', 'Horde', 'Monster', 'Player']
+types = ['Map', 'Horde', 'Monster', 'Item', 'Player']
 methods = ['add', 'remove', 'index']
 
+#tokens = list(reserved.values()) + \
+#    ['TYPE', 'ID', 'METHOD',
+#     'INT_VAL', 'REAL_VAL', 'QUOTED_STRING',
+#     'DOT', 'COLON', 'SEMICOLON', 'COMMA', 'EQUAL',
+#     'EQ', 'NEQ', 'GT', 'GET', 'LT', 'LET',
+#     'O_ROUND', 'C_ROUND', 'O_SQUARE', 'C_SQUARE']
+
 tokens = list(reserved.values()) + \
-    ['TYPE', 'ID', 'METHOD',
+    ['TYPE', 'ID',
      'INT_VAL', 'REAL_VAL', 'QUOTED_STRING',
      'DOT', 'COLON', 'SEMICOLON', 'COMMA', 'EQUAL',
      'EQ', 'NEQ', 'GT', 'GET', 'LT', 'LET',
      'O_ROUND', 'C_ROUND', 'O_SQUARE', 'C_SQUARE']
+
 
 # Token definitions
 
@@ -56,8 +64,8 @@ def t_ID(t):
         t.type = reserved[t.value]
     elif t.value in types:
         t.type = 'TYPE'
-    elif t.value in methods:
-        t.type = 'METHOD'
+    #elif t.value in methods:
+    #    t.type = 'METHOD'
     return t
 
 def t_INT_VAL(t):

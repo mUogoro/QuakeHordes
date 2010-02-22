@@ -5,6 +5,11 @@
 from math import sin, cos, pi
 from backend_internals import *
 
+# DEFAULT VALUES
+MAP_WIDTH = 666
+MAP_HEIGHT = 666
+PLAYER_X = 0
+PLAYER_Y = 0
 
 class Map(object):
 
@@ -18,6 +23,7 @@ class Map(object):
         self.sHordes = [sym.value
                         for sym in symbols['hordes'].value]
         self.sPlayers = symbols['players'].value
+        self.sItems = symbols['items'].value
 
         self.brushes = []
         self.players = []
@@ -27,6 +33,18 @@ class Map(object):
 
 
     def validate(self):
+        # Check if:
+        # - almost one horde is specified
+        # - almost one specified horde is valid
+
+        # Define default values for undefined attributes
+        #if self.width is None:
+        #    self.width = MAP_WIDTH
+        #if self.height is None:
+        #    self.height = MAP_HEIGHT
+        #if self.introMessage is None:
+        #    pass
+
         return True
 
     
@@ -54,10 +72,10 @@ class Map(object):
 
 
         # Build walls bars
-        step = 30
-        barWidth = 10
-        barHeight = 10
-        barLenght = 300
+        step = 50
+        barWidth = 20
+        barHeight = 20
+        barLenght = 200
         n = 0
         for i in range(max(self.width, self.height)/step):
             if n < self.width:
@@ -154,10 +172,10 @@ class Map(object):
         for playerSym in self.sPlayers:
             playerName = self.name + '_player1'
             playerX = playerSym.value['x'].value
-            playerZ = playerSym.value['z'].value
+            playerY = playerSym.value['y'].value
             self.players.append(Player(playerName,
                                        playerX,
-                                       playerZ,
+                                       playerY,
                                        25))
 
         y = 0
@@ -252,14 +270,14 @@ class Horde(object):
                  fireExit=False):
         self.id = symbols['id'].value
         self.x = symbols['x'].value
-        self.z = symbols['z'].value
+        self.y = symbols['y'].value
         self.realX = x
         self.realY = y
-        self.realZ = z
+        self.realZ= z
         self.sNext = symbols['next'].value
         self.delay = symbols['delay'].value
         self.fireX = symbols['fireX'].value
-        self.fireZ = symbols['fireZ'].value
+        self.fireY = symbols['fireY'].value
         self.sMonsters = \
             [sym.value
              for sym in symbols['monsters'].value]
@@ -290,13 +308,14 @@ class Horde(object):
         # Create the horde trigger
         if self.isFired:
             hordeTrigger = Trigger(self.id,
-                                   self.x, self.z, 10,
+                                   self.x, self.y, 10,
                                    isCounter=True,
                                    count=self.fireCount)
         else:
             hordeTrigger = Trigger(self.id)
             hordeTrigger.brush.scale(20, 20, 1)
-            hordeTrigger.translate(self.x, self.z, 1)
+            hordeTrigger.translate(self.fireX,
+                                   self.fireY, 1)
         self.hordeTrigger = hordeTrigger
 
         # Create monsters and their destinations
@@ -312,12 +331,9 @@ class Horde(object):
             nextHordeName = 'exit'
         elif self.sNext is not None:
             nextHordeName = self.sNext['id'].value
+        
+        # Compute monsters' teleport destination
         for monstSym in self.sMonsters:
-            # TODO: compute here monster destination
-            #       (teleport) coordinates based on
-            #       a user specified formation (triangular,
-            #       circular etc.)
-
             x = xStep * cos(angle)
             y = yStep * sin(angle)
 
@@ -335,7 +351,7 @@ class Horde(object):
             # TODO: how to manage monsters with same name
             monstSym['id'].value += str(i)
             monster = Monster(monstSym, self.id,
-                              self.x+x, self.z+y, 20,
+                              self.x+x, self.y+y, 20,
                               self.realX,
                               self.realY,
                               self.realZ,

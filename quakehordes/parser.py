@@ -70,8 +70,9 @@ def p_statement(p):
 def p_assign_stmt(p):
     '''assign_stmt : lval EQUAL rval SEMICOLON'''
     lval = p[1]
-    rval = p[2]
-    childs = [p[1], p[3]]
+    rval = p[3]
+    #childs = [p[1], p[3]]
+    childs = [lval, rval]
     #p[0] = AssignNode(p.lineno(0), p.lexpos(0), childs)
     p[0] = AssignNode(p.lineno(0), _retRuleLinepos(p, 0),
                       childs)
@@ -128,7 +129,8 @@ def p_item(p):
 
 
 def p_methcall_stmt(p):
-    'methcall_stmt : attr_lookup DOT METHOD O_ROUND args C_ROUND SEMICOLON'
+    #'methcall_stmt : attr_lookup DOT METHOD O_ROUND args C_ROUND SEMICOLON'
+    'methcall_stmt : attr_lookup DOT ID O_ROUND args C_ROUND SEMICOLON'
     var = p[1]
     funcName = p[3]
     args = p[5]
@@ -139,9 +141,9 @@ def p_methcall_stmt(p):
 
 
 def p_print_stmt(p):
-    'print_stmt : PRINT rval SEMICOLON'
+    'print_stmt : PRINT args SEMICOLON'
     p[0] = PrintNode(p.lineno(0), _retRuleLinepos(p, 0),
-                     [p[2]])
+                     p[2])
 
 
 def p_for_stmt(p):
@@ -256,7 +258,8 @@ def p_args(p):
 
 
 def p_arg(p):
-    '''arg : attr_lookup'''
+    #'''arg : attr_lookup'''
+    '''arg : rval'''
     p[0] = p[1]
 
 
