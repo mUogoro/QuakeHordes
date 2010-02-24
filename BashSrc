@@ -1,0 +1,3 @@
+# Set some environment variables before execution
+export PATH=$PATH:$(pwd)/bin:$(pwd)/bin/hmap2
+export PYTHONPATH=$PYTHONPATH:$(pwd)
