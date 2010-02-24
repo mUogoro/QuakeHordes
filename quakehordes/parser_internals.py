@@ -119,7 +119,7 @@ class HDLTypeError(Exception):
 
 
     def __str__(self):
-        return "Invalid type on %d:%d: expected %s, found %s" % \
+        return "Invalid type on %d:%d: expected [%s], found [%s]" % \
             (self.lineno, self.linepos,
              self.typeExpected, self.typeFound)
 
@@ -138,11 +138,11 @@ class HDLAttrError(Exception):
 
     def __str__(self):
         if not self.isMethod:
-            return "Invalid attribute on %d:%d: type %s has no attribute %s" % \
+            return "Invalid attribute on %d:%d: type [%s] has no attribute [%s]" % \
                 (self.lineno, self.linepos,
                  self.type, self.attrName)
         else:
-            return "Invalid method on %d:%d: type %s has no method %s" % \
+            return "Invalid method on %d:%d: type [%s] has no method [%s]" % \
                 (self.lineno, self.linepos,
                  self.type, self.attrName)
 
@@ -163,17 +163,21 @@ class HDLIndexError(Exception):
 
 class HDLNameError(Exception):
 
-    def __init__(self, name, lineno, linepos):
+    def __init__(self, name, lineno, linepos, 
+                 alreadyDecl=False):
         super(HDLNameError, self).__init__()
         self.name = name
         self.lineno = lineno
         self.linepos = linepos
-
+        self.alreadyDecl = alreadyDecl
     
     def __str__(self):
-        return "Name error on %d:%d: no variable %s declared" % \
+        if not self.alreadyDecl:
+            return "Name error on %d:%d: no variable [%s] declared" % \
             (self.lineno, self.linepos, self.name)
-
+        else:
+            return "Name error on line %d: variable [%s] already declared" % \
+            (self.lineno, self.name)
 
 
 # Abstract Syntax Tree nodes definition
@@ -201,6 +205,15 @@ class DeclNode(AstNode):
     def action(self, scope):
         _type = self.childs[0]
         name = self.childs[1]
+        
+        # Search for already declared variables
+        try:
+            scope.get(name)
+            raise HDLNameError(name, self.lineno,
+                               self.linepos, True)
+        except KeyError:
+            pass
+
         dim = self.childs[2]
         if dim is None:
             # Single-dimension variable declaration
@@ -419,15 +432,14 @@ class ForNode(AstNode):
             symName = self.childs[0]
             sym = Symbol(symName, "int", None)
         
-        scope.push({})
-        scope.add(symName, sym)
         code = self.childs[2:]
         for i in it:
+            scope.push({})
+            scope.add(symName, sym)
             scope.get(symName).value = i
             for child in code:
-                child.action(scope)
-
-        scope.pop()
+                child.action(scope)    
+            scope.pop()
 
 
 class CondNode(AstNode):

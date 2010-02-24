@@ -67,7 +67,7 @@ def p_declaration(p):
         childs = [p[1], p[2], None]
     else:
         childs = [p[1], p[2], 0]
-    p[0] = DeclNode(p.lineno(0), _retRuleLinepos(p, 0),
+    p[0] = DeclNode(p.lineno(0), _retRuleLinepos(p, 1),
                     childs)
     
     

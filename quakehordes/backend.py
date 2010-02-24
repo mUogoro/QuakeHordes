@@ -200,9 +200,6 @@ class Map(object):
             stderr.write("Warning: invalid map type for map [%s]" % self.id)
             return False
 
-        # Check map dimension
-        
-
         # Build players start point. If no player start
         # point is specified, define a default one
         if len(self.players) == 0:
@@ -246,20 +243,29 @@ class Map(object):
                 lastHorde = False
 
             i = self.sHordes.index(hordeSym)
+            # If no id is specified for current horde,
+            # define a new one
+            if hordeSym['id'].value == '':
+                hordeId = "%s_horde%d" % (self.name, i)
+            else:
+                hordeId = hordeSym['id'].value
+
             if i>0 and self.sHordes[i-1]['next'].value \
                     is not None:
                 # The horde is not the first horde and
                 # it's activated by the previous horde
                 nMonst = \
                     len(self.sHordes[i-1]['monsters'].value)
-                horde = Horde(hordeSym, self.name, x, y, z,
+                horde = Horde(hordeId, hordeSym, self.name,
+                              x, y, z,
                               isFired=True,
                               fireCount=nMonst,
                               fireExit=lastHorde)
             else:
                 # The horde is activated by a player-touched
                 # trigger
-                horde = Horde(hordeSym, self.name, x, y, z,
+                horde = Horde(hordeId, hordeSym, self.name, 
+                              x, y, z,
                               fireExit=lastHorde)
             
             if horde.setup(self.width, self.height):
@@ -342,10 +348,10 @@ class Map(object):
 
 class Horde(object):
 
-    def __init__(self, symbols, mapName, x, y, z,
+    def __init__(self, _id, symbols, mapName, x, y, z,
                  isFired=False, fireCount=0,
                  fireExit=False):
-        self.id = symbols['id'].value
+        self.id = _id
         self.x = MeterToQuake(symbols['x'].value)
         self.y = MeterToQuake(symbols['y'].value)
         self.fireX = MeterToQuake(symbols['fireX'].value)
@@ -480,7 +486,7 @@ class Horde(object):
 
 class Monster(object):
 
-    VALID = {'type':['army', 'enforcer', 'zombie', 'dog'
+    VALID = {'type':['army', 'enforcer', 'zombie', 'dog',
                      'wizard']}
     DEFAULTS = {'type':'army'}
 
@@ -537,8 +543,8 @@ class Monster(object):
         if self.x > boundX or \
                 self.y > boundY:
             stderr.write("Warning: invalid position specified for monster [%s] of horde [%s]\n" % \
-                             (self.hordeName,
-                              self.id))
+                             (self.id,
+                              self.hordeName))
             return False
 
         # Create the monster
