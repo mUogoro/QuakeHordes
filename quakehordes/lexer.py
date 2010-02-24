@@ -5,6 +5,18 @@
 #*************************************************
 from ply import lex as lex
 
+class HDLLexError(Exception):
+
+    def __init__(self, token, lineno, linepos):
+        super(HDLLexError, self).__init__()
+        self.token = token
+        self.lineno = lineno
+        self.linepos = linepos
+
+    def __str__(self):
+        return "Unexpected character [%s] on %d:%d" % \
+            (self.token.value[0], self.lineno, self.linepos)
+
 
 # List of tokens used by the language
 reserved = {'if':'IF',
@@ -114,8 +126,8 @@ def t_newline(t):
 t_ignore = r' '
 
 def t_error(t):
-    raise SyntaxError("Error on line %d  on token %s" %
-                      (t.lexer.lineno, t.value))
+    raise HDLLexError(t, t.lexer.lineno,
+                      t.lexpos-t.lexer.startLinePos-1)
 
 # Build the lexer
 #lex.lex(debug=True)

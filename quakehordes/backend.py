@@ -2,8 +2,15 @@
 # backend_internals.py
 #
 #*************************************************
+from sys import stdout, stderr
 from math import sin, cos, pi
 from backend_internals import *
+
+# CONVERSION FACTOR
+qToMeter = 0.0381
+
+def MeterToQuake(x):
+    return int(x/qToMeter)
 
 # DEFAULT VALUES
 MAP_WIDTH = 666
@@ -11,14 +18,24 @@ MAP_HEIGHT = 666
 PLAYER_X = 0
 PLAYER_Y = 0
 
+class ValidateException(Exception):
+    pass
+
+
 class Map(object):
+
+    DEFAULTS = {'type':'cage', 
+                'width':666,
+                'height':666}
+    VALID = {'type':['cage', 'walls']}
 
     def __init__(self, symbols):
         self.name = symbols['name'].value
         self.introMessage = symbols['introMessage'].value
         self.difficult = symbols['difficult'].value
-        self.width = symbols['width'].value
-        self.height = symbols['height'].value
+        self.width = MeterToQuake(symbols['width'].value)
+        self.height = MeterToQuake(symbols['height'].value)
+        self.type = symbols['type'].value
         self.sNext = symbols['next'].value
         self.sHordes = [sym.value
                         for sym in symbols['hordes'].value]
@@ -28,26 +45,12 @@ class Map(object):
         self.brushes = []
         self.players = []
         self.hordes = []
+        self.items = []
         self.exitTrigger = None
         self.exit = []
 
-
-    def validate(self):
-        # Check if:
-        # - almost one horde is specified
-        # - almost one specified horde is valid
-
-        # Define default values for undefined attributes
-        #if self.width is None:
-        #    self.width = MAP_WIDTH
-        #if self.height is None:
-        #    self.height = MAP_HEIGHT
-        #if self.introMessage is None:
-        #    pass
-
-        return True
-
     
+    # Internals methods for brushes building
     def _buildCage(self):
         self.cage = []
         exitSize = 60
@@ -72,7 +75,7 @@ class Map(object):
 
 
         # Build walls bars
-        step = 50
+        step = 40
         barWidth = 20
         barHeight = 20
         barLenght = 200
@@ -116,21 +119,47 @@ class Map(object):
         self.mainBrush.scale(self.width, self.height, 1.0)
 
         # Build walls
-        wall1 = Brush('wall_0x')
+        exitSize = 60
+        wall1 = Brush('wall_1')
         wall1.scale(self.width, 16, 256)
-        wall2 = Brush('wall_xx')
+        wall2 = Brush('wall_2')
         wall2.scale(self.width, 16, 256)
         wall2.translate(0, self.height, 0)
-        wall3 = Brush('wall_xy')
-        wall3.scale(16, self.height, 256)
+        wall3 = Brush('wall_3')
+        wall3.scale(16, self.height/2-exitSize, 256)
         wall3.translate(self.width, 0, 0)
-        wall4 = Brush('wall_0y')
-        wall4.scale(16, self.height, 256)
-        self.brush.extend([wall1, wall2, wall3, wall4])
+        wall4 = Brush('wall_4')
+        wall4.scale(16, self.height/2-exitSize, 256)
+        wall4.translate(self.width,
+                        self.height/2+exitSize , 0)
+        wall5 = Brush('wall_5')
+        wall5.scale(16, self.height, 256)
+        self.brushes.extend([wall1, wall2, wall3,
+                             wall4, wall5])
            
 
-    def _buildWallExit(self):
-        pass
+    def _buildWallsExit(self):
+        # Build exit door
+        exitSize = 60
+        _exit = Door('exit_trigger')
+        _exit.scale(16, exitSize*2, 256)
+        _exit.translate(self.width,
+                        self.height/2-exitSize, 0)
+        self.exit.append(_exit)
+
+        # Build changelevel trigger
+        if self.sNext is not None:
+            nextMap = self.sNext
+            nextMapName = nextMap['name'].value
+        else:
+            nextMapName = self.name
+
+        chLevelTrig = ChangeLevelTrigger(nextMapName)
+        chLevelTrig.brush.scale(1, exitSize*4, 256)
+        chLevelTrig.brush.translate(self.width+25,
+                                    self.height/2-exitSize,
+                                    -25)
+        self.exit.append(chLevelTrig)
 
 
     def _buildCageExit(self):
@@ -149,7 +178,7 @@ class Map(object):
 
         # Build changelevel trigger
         if self.sNext is not None:
-            nextMap = self.sNext.value
+            nextMap = self.sNext
             nextMapName = nextMap['name'].value
         else:
             nextMapName = self.name
@@ -164,56 +193,107 @@ class Map(object):
 
 
     def setup(self):
-        # TODO: better map generation?
-        self._buildCage()
-        self._buildCageExit()
-        #self._buildWalls()
+        # Check the map type
+        if self.type == '':
+            self.type = 'cage'
+        elif self.type not in MAP.VALID['type']:
+            stderr.write("Warning: invalid map type for map [%s]" % self.id)
+            return False
 
-        for playerSym in self.sPlayers:
-            playerName = self.name + '_player1'
-            playerX = playerSym.value['x'].value
-            playerY = playerSym.value['y'].value
+        # Check map dimension
+        
+
+        # Build players start point. If no player start
+        # point is specified, define a default one
+        if len(self.players) == 0:
+            self.players.append(Player('%s_singleplayer' % \
+                                           self.name,
+                                       self.width/2,
+                                       self.height/2, 25))
+
+        else:
+            playerName = self.name + '_singleplayer'
+            playerX = self.sPlayers[0].value['x'].value
+            playerY = self.sPlayers[0].value['y'].value
             self.players.append(Player(playerName,
                                        playerX,
                                        playerY,
                                        25))
+            for playerSym in self.sPlayers[1:]:
+                playerName = self.name + '_playercoop'
+                playerX = playerSym.value['x'].value
+                playerY = playerSym.value['y'].value
+                self.players.append(Player(playerName,
+                                           playerX,
+                                           playerY,
+                                           25, isCoop=True))
 
         y = 0
+        validHordes = 0
         for hordeSym in self.sHordes:
-            #hordeName = '%s_%s' % \
-            #    (self.name, hordeSym.value['id'].value)
+            # Used for compute the initial position
+            # of the horde (which is the horde position
+            # first than the horde is teleported into
+            # the map)
             x = 0
             y += 200
             z = -400
 
             if hordeSym is self.sHordes[-1]:
-                # The last horde activates the 
-                # final-level door
+                # The last horde activates the exit doors
                 lastHorde = True
             else:
                 lastHorde = False
 
             i = self.sHordes.index(hordeSym)
-            if i>0 and \
-                    self.sHordes[i-1]['next'].value is not None:
-                count = len(self.sHordes[i-1]['monsters'].value)
+            if i>0 and self.sHordes[i-1]['next'].value \
+                    is not None:
+                # The horde is not the first horde and
+                # it's activated by the previous horde
+                nMonst = \
+                    len(self.sHordes[i-1]['monsters'].value)
                 horde = Horde(hordeSym, self.name, x, y, z,
                               isFired=True,
-                              fireCount=count,
+                              fireCount=nMonst,
                               fireExit=lastHorde)
             else:
+                # The horde is activated by a player-touched
+                # trigger
                 horde = Horde(hordeSym, self.name, x, y, z,
                               fireExit=lastHorde)
-            horde.setup()
-            self.hordes.append(horde)
+            
+            if horde.setup(self.width, self.height):
+                self.hordes.append(horde)
 
-        # Finally, create exit-door
-        self.exitTrigger = Trigger('exit',
-                                   self.width/2,
-                                   self.height/2,
-                                   isCounter=True,
-                                   count=len(self.sHordes[-1]['monsters'].value))
-        
+        if len(self.hordes) == 0:
+            stderr.write("Warning: no valid hordes specified for map [%s]\n" % self.name)
+            return False
+
+        # Add items
+        i=0
+        for item in self.sItems:
+            it = Item('%s_%s%d' % \
+                          (self.name,
+                           item.value['type'].value, i),
+                      item.value)
+            if it.setup(self.width, self.height):
+                self.items.append(it)
+
+        # Finally, create the map brushes and the exit-door
+        if self.type == 'cage':
+            self._buildCage()
+            self._buildCageExit()
+        else:
+            self._buildWalls()
+            self._buildWallsExit()
+
+        self.exitTrigger = \
+            Trigger('exit',
+                    self.width/2,
+                    self.height/2,
+                    isCounter=True,
+                    count=len(self.sHordes[-1]['monsters'].value))
+        return True
         
     
     def __str__(self):
@@ -222,16 +302,9 @@ class Map(object):
         retVal = '// Map %s\n{\n' % self.name
         retVal += '"classname" "worldspawn"\n'
 
-        # Generate main brush
+        # Generate main brushes
         retVal += ''.join([str(brush)+'\n'
                            for brush in self.brushes])+'\n'
-
-        # Generate cage
-        #retVal += ''.join([str(brush)+'\n'
-        #                   for brush in self.cage])
-        # Generate walls
-        #retVal += ''.join([str(brush)+'\n'
-        #                   for brush in self.walls])
         
 
         # Generate all hordes support brushes
@@ -259,6 +332,10 @@ class Map(object):
                            for player in self.players])
         retVal += '\n'
         
+        # Generate items
+        retVal += ''.join(str(item)
+                          for item in self.items)
+
         return retVal
 
 
@@ -269,15 +346,16 @@ class Horde(object):
                  isFired=False, fireCount=0,
                  fireExit=False):
         self.id = symbols['id'].value
-        self.x = symbols['x'].value
-        self.y = symbols['y'].value
+        self.x = MeterToQuake(symbols['x'].value)
+        self.y = MeterToQuake(symbols['y'].value)
+        self.fireX = MeterToQuake(symbols['fireX'].value)
+        self.fireY = MeterToQuake(symbols['fireY'].value)
+        self.message = symbols['message'].value
         self.realX = x
         self.realY = y
         self.realZ= z
         self.sNext = symbols['next'].value
         self.delay = symbols['delay'].value
-        self.fireX = symbols['fireX'].value
-        self.fireY = symbols['fireY'].value
         self.sMonsters = \
             [sym.value
              for sym in symbols['monsters'].value]
@@ -290,12 +368,22 @@ class Horde(object):
         self.supBrush = None
         self.hordeTrigger = None
         
-    
-    def validate(self):
-        return True
 
+    def setup(self, boundX, boundY):
+        # Check if specified position is inside the map area
+        if self.x > boundX or \
+                self.y > boundY or \
+                self.fireX > boundX or \
+                self.fireY > boundY:
+            stderr.write("Warning: invalid position specified for horde [%s]\n" % self.id)
+            return False
 
-    def setup(self):
+        # Set a default name for horde if no name was
+        # specified
+        if self.message == '':
+            self.message = 'Fight the \'%s\' horde!!!' % \
+                self.id
+
         # Create the supporting surface
         supBrush = Brush(self.id + '_brush')
         # Each monster has a 100x100 support area
@@ -309,10 +397,14 @@ class Horde(object):
         if self.isFired:
             hordeTrigger = Trigger(self.id,
                                    self.x, self.y, 10,
+                                   delay=self.delay,
+                                   message=self.message,
                                    isCounter=True,
                                    count=self.fireCount)
         else:
-            hordeTrigger = Trigger(self.id)
+            hordeTrigger = Trigger(self.id,
+                                   delay=self.delay,
+                                   message=self.message)
             hordeTrigger.brush.scale(20, 20, 1)
             hordeTrigger.translate(self.fireX,
                                    self.fireY, 1)
@@ -320,10 +412,9 @@ class Horde(object):
 
         # Create monsters and their destinations
         angle = 0.0
-        angleStep = 0.8
-        xStep = 100
-        yStep = 100
-
+        angleStep = 1.0
+        xStep = 180
+        yStep = 180
         i = 0
 
         nextHordeName = ''
@@ -332,12 +423,33 @@ class Horde(object):
         elif self.sNext is not None:
             nextHordeName = self.sNext['id'].value
         
-        # Compute monsters' teleport destination
         for monstSym in self.sMonsters:
+            # Compute monsters' teleport destination
             x = xStep * cos(angle)
             y = yStep * sin(angle)
+            i += 1
 
+            # Get the monster id: if no id is specified,
+            # define a unique id for the monster
+            if monstSym['id'].value == '':
+                monstId = '%s_monst%d' % (self.id, i)
+            else:
+                monstId = '%s%d' % (monstSym['id'].value, i)
+            monster = Monster(monstId, monstSym, self.id,
+                              self.x+x, self.y+y, 20,
+                              self.realX,
+                              self.realY,
+                              self.realZ,
+                              nextHordeName)
+
+            # Setup the monster and add it to current horde
+            if not monster.setup(boundX, boundY):
+                continue
+            self.monsters.append(monster)
+
+            # Update data for next monster placement
             angle += angleStep
+            self.realX += 100
             if angle >= 2*pi:
                 angle = 0
                 #xStep += xStep
@@ -347,21 +459,12 @@ class Horde(object):
                 if angleStep != 0:
                     angleStep -= 0.2
 
+        if len(self.monsters) > 0:
+            return True
+        else:
+            stderr.write("Warning: no valid monster specified for horde [%s]\n" % self.id)
+            return False
 
-            # TODO: how to manage monsters with same name
-            monstSym['id'].value += str(i)
-            monster = Monster(monstSym, self.id,
-                              self.x+x, self.y+y, 20,
-                              self.realX,
-                              self.realY,
-                              self.realZ,
-                              nextHordeName)
-            
-            i += 1
-            self.realX += 100
-
-            monster.setup()
-            self.monsters.append(monster)
 
 
     def __str__(self):
@@ -377,9 +480,13 @@ class Horde(object):
 
 class Monster(object):
 
-    def __init__(self, symbols, hordeName, x, y, z, 
+    VALID = {'type':['army', 'enforcer', 'zombie', 'dog'
+                     'wizard']}
+    DEFAULTS = {'type':'army'}
+
+    def __init__(self, _id, symbols, hordeName, x, y, z, 
                  realX, realY, realZ, nextHordeName=None):
-        self.id = symbols['id'].value
+        self.id = _id
         self.type = symbols['type'].value
         self.hordeName = hordeName
         self.x = x
@@ -397,10 +504,43 @@ class Monster(object):
 
 
     def validate(self):
+        # Check monster type
+        if self.type == '':
+            # Not specified: init defaults
+            self.type = Monster.DEFAULTS['type']
+        elif self.type not in Monster.VALID['type']:
+            # Wrong tyep specified: warn the user and
+            # return false
+            stderr.write("Warning: invalid type [%s] of monster [%s] on horde [%s]\n" % \
+                             (self.type,
+                              self.id,
+                              self.hordeName))
+            return False
         return True
 
 
-    def setup(self):
+    def setup(self, boundX, boundY):
+        # Check monster type
+        if self.type == '':
+            # Not specified: init defaults
+            self.type = Monster.DEFAULTS['type']
+        elif self.type not in Monster.VALID['type']:
+            # Wrong tyep specified: warn the user and
+            # return false
+            stderr.write("Warning: invalid type [%s] of monster [%s] on horde [%s]\n" % \
+                             (self.type,
+                              self.id,
+                              self.hordeName))
+            return False
+
+        # Check the monster position
+        if self.x > boundX or \
+                self.y > boundY:
+            stderr.write("Warning: invalid position specified for monster [%s] of horde [%s]\n" % \
+                             (self.hordeName,
+                              self.id))
+            return False
+
         # Create the monster
         monsterName = '%s_%s' % (self.hordeName, self.id)
         monster = \
@@ -437,6 +577,7 @@ class Monster(object):
                                          self.z)
         self.destination = destination
         
+        return True
 
 
     def __str__(self):
@@ -448,3 +589,103 @@ class Monster(object):
         
         return retVal
 
+
+class Item(object):
+
+    VALID = {'type':{'health':[],
+                      'armor':[],
+                      'ammo':['cells', 'rockets',
+                              'sheels', 'spikes'],
+                      'artifact':['invisibility',
+                                  'invulnerability',
+                                  'super_damage'],
+                      'weapon':['grenadelauncher',
+                                'lightning',
+                                'nailgun',
+                                'rocketlauncher',
+                                'supernailgun',
+                                'supershotgun']},
+             'size':['small', 'medium', 'big']}
+    DEFAULTS = {'type':'health', 'size':'medium'}
+
+    def __init__(self, _id, symbols):
+        self.id = _id
+        self.type = symbols['type'].value
+        self.subType = symbols['subType'].value
+        self.size = symbols['size'].value
+        self.x = MeterToQuake(symbols['x'].value)
+        self.y = MeterToQuake(symbols['y'].value)
+        self.item = None
+        
+
+    def setup(self, boundX, boundY):
+        # Check position
+        if self.x > boundX or \
+                self.y > boundY:
+            stderr.write("Warning: invalid position for item [%s]\n" % self.id)
+            return False
+
+        # Check type, subType and size. If no type is
+        # specified, init the item as a medium health-pack
+        if self.type == '':
+            self.type = 'health'
+            self.size = 'medium'
+            self.item = Health(self.id, self.size,
+                               self.x, self.y, 25)
+            return True
+
+        # Setup health item
+        elif self.type == 'health':
+            if not self.size in Item.VALID['size']:
+                stderr.write("Warning: invalid size for health [%s]\n" % self.id)
+                return False
+            self.item = Health(self.id, self.size,
+                               self.x, self.y, 25)
+
+        # Setup armor item
+        elif self.type == 'armor':
+            if not self.size in Item.VALID['size']:
+                stderr.write("Warning: invalid size for ammo [%s]\n" % self.id)
+                return False
+            self.item = Armor(self.id, self.size,
+                              self.x, self.y, 25)
+        
+        # Setup artifact item
+        elif self.type == 'artifact':
+            if not self.subType in \
+                    Item.VALID['type']['artifact']:
+                stderr.write("Warning: invalid sub-type for artifact [%s]\n" % self.id)
+                return False
+            self.item = Artifact(self.id, self.subType,
+                                 self.x, self.y, 25)
+
+        # Setup ammo item
+        elif self.type == 'ammo':
+            if not self.size in Item.VALID['size']:
+                stderr.write("Warning: invalid size for ammo [%s]\n" % self.id)
+                return False
+            if not self.subType in \
+                    Item.VALID['type']['ammo']:
+                stderr.write("Warning: invalid sub-type for ammo [%s]\n" % self.id)
+                return False
+            self.item = Ammo(self.id, self.subType,         
+                             self.size, self.x, self.y, 25)
+
+        # Setup weapon item
+        elif self.type == 'weapon':
+            if not self.subType in \
+                    Item.VALID['type']['weapon']:
+                stderr.write("Warning: invalid sub-type for weapon [%s]\n" % self.id)
+                return False
+            self.item = Weapon(self.id, self.subType,
+                               self.x, self.y, 25)
+        
+        else:
+            stderr.write("Warning: invalid type for item [%s]\n" % self.id)
+            return False
+
+        return True
+
+
+    def __str__(self):
+        return str(self.item)

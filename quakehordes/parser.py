@@ -11,6 +11,20 @@ from lexer import tokens
 from parser_internals import *
 
 
+class HDLSyntaxError(Exception):
+
+    def __init__(self, token, lineno, linepos):
+        super(HDLSyntaxError, self).__init__()
+        self.token = token
+        self.lineno = lineno
+        self.linepos = linepos
+
+    
+    def __str__(self):
+        return "Syntax error on %d:%d: unexpected token %s" % \
+            (self.lineno, self.linepos, self.token)
+
+
 # Global variables
 ENV = Env()
 
@@ -263,11 +277,17 @@ def p_arg(p):
     p[0] = p[1]
 
 
+def p_error(p):
+    raise HDLSyntaxError(p.type,
+                         p.lineno,
+                         p.lexpos-p.lexer.startLinePos-1)
+
+
 #************************************
 # Grammar productions definition end
 #************************************
 
-
-# Create the parser
-#parser = yacc.yacc(debug=True)
-parser = yacc.yacc()
+# Build the parser
+def BuildHDLParser(workDir):
+  #parser = yacc.yacc(debug=True)
+  return yacc.yacc(outputdir=workDir)

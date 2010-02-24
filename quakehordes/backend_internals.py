@@ -126,9 +126,12 @@ class Player(MovableEntity):
 class Trigger(MovableEntity):
 
     def __init__(self, _id, x=None, y=None, z=None,
+                 delay=0, message='',
                  isCounter=False, count=0):
         super(Trigger, self).__init__(_id, x, y, z)
         self.brush = Brush(self.id+"_brush")
+        self.delay = delay
+        self.message = message
         self.isCounter = isCounter
         self.count = count
 
@@ -143,16 +146,17 @@ class Trigger(MovableEntity):
             retVal = '''{
 "classname" "trigger_once"
 "target" "%s_trigger"
+"delay" "%f"
+"message" "%s"
 %s
 }
-''' % (self.id, str(self.brush))
+''' % (self.id, self.delay, self.message, str(self.brush))
         else:
             retVal = '''{
 "classname" "trigger_counter"
 "origin" "%d %d %d"
 "target" "%s_trigger"
 "targetname" "%s_fire"
-"spawnflags" "1"
 "count" "%d"
 }
 ''' % (self.pos[0], self.pos[1], self.pos[2],
@@ -186,9 +190,10 @@ class ChangeLevelTrigger(MovableEntity):
 class MonsterTrigger(MovableEntity):
     
     def __init__(self, _id, hordeName,
-                 x=None, y=None, z=None):
+                 x=None, y=None, z=None, delay=0):
         super(MonsterTrigger, self).__init__(_id, x, y, z)
         self.hordName = hordeName
+        self.delay = delay
         self.brush = Brush(self.id+"_brush")
     
 
@@ -270,3 +275,109 @@ class MonsterEntity(MovableEntity):
        self.target)
         return retVal
 
+
+class Health(MovableEntity):
+
+    def __init__(self, _id, size,
+                 x=None, y=None, z=None):
+        super(Health, self).__init__(_id, x, y, z)
+        self.size = size
+
+
+    def __str__(self):
+        if self.size == 'small':
+            spawnflag = 0
+        elif self.size == 'medium':
+            spawnflag = 1
+        else:
+            spawnflag = 2
+
+        retVal = '''{
+"classname" "item_health"
+"origin" "%d %d %d"
+"spawnflag" "%d"
+}
+''' % (self.pos[0], self.pos[1], self.pos[2], spawnflag)
+        return retVal
+
+
+class Armor(MovableEntity):
+
+    def __init__(self, _id, size,
+                 x=None, y=None, z=None):
+        super(Armor, self).__init__(_id, x, y, z)
+        self.size = size
+
+
+    def __str__(self):
+        if self.size == 'small':
+            armName = 'armor1'
+        elif self.size == 'medium':
+            armName = 'armor2'
+        else:
+            armName = 'armorInv'
+
+        retVal = '''{
+"classname" "item_%s"
+"origin" "%d %d %d"
+}
+''' % (armName, self.pos[0], self.pos[1], self.pos[2])
+        return retVal
+
+
+class Artifact(MovableEntity):
+
+    def __init__(self, _id, _type,
+                 x=None, y=None, z=None):
+        super(Artifact, self).__init__(_id, x, y, z)
+        self.type = _type
+
+
+    def __str__(self):
+        retVal = '''{
+"classname" "item_artifact_%s"
+"origin" "%d %d %d"
+}
+''' % (self.type, self.pos[0], self.pos[1], self.pos[2])
+        return retVal
+
+
+class Ammo(MovableEntity):
+
+    def __init__(self, _id, _type, size,
+                 x=None, y=None, z=None):
+        super(Ammo, self).__init__(_id, x, y, z)
+        self.type = _type
+        self.size = size
+
+    def __str__(self):
+        if self.size == 'small':
+            spawnflag = 0
+        else:
+            spawnflag = 1
+
+        retVal = '''{
+"classname" "item_%s"
+"origin" "%d %d %d"
+"spawnflag" "%d"
+}
+''' % (self.type, self.pos[0], self.pos[1], self.pos[2],
+       spawnflag)
+        return retVal
+
+
+class Weapon(MovableEntity):
+
+    def __init__(self, _id, _type,
+                 x=None, y=None, z=None):
+        super(Weapon, self).__init__(_id, x, y, z)
+        self.type = _type
+
+
+    def __str__(self):
+        retVal = '''{
+"classname" "weapon_%s"
+"origin" "%d %d %d"
+}
+''' % (self.type, self.pos[0], self.pos[1], self.pos[2])
+        return retVal

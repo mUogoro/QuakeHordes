@@ -11,6 +11,7 @@ TYPES = {'Map': {'name':'string',
                  'difficult':'string',
                  'width':'int',
                  'height':'int',
+                 'type':'string',
                  'next':'Map',
                  'players':'Player[]',
                  'hordes':'Horde[]',
@@ -27,7 +28,9 @@ TYPES = {'Map': {'name':'string',
                     'type':'string'},
          'Item':{'type':'string',
                  'subType':'string',
-                 'size':'int'},
+                 'size':'int',
+                 'x':'int',
+                 'y':'int'},
          'Player':{'x':'int',
                    'y':'int'}}
 
@@ -200,6 +203,7 @@ class DeclNode(AstNode):
         name = self.childs[1]
         dim = self.childs[2]
         if dim is None:
+            # Single-dimension variable declaration
             value = {}
             value.update(TYPES[_type])
             sym = Symbol(name, _type, value, dim)
@@ -209,8 +213,16 @@ class DeclNode(AstNode):
                 # Array field: init as an empty list
                 if _type.endswith('[]'):
                     tmp.value = []
+                # Other types: init as empty-value variable
+                elif _type == 'int':
+                    tmp.value = 0
+                elif _type == 'real':
+                    tmp.value = 0.0
+                elif _type == 'string':
+                    tmp.value = ''
                 sym.value[field]=tmp
         else:
+            # List declaration
             value = []
             _type += '[]'
             sym = Symbol(name, _type, value, dim)
