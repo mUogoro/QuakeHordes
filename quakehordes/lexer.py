@@ -5,10 +5,10 @@
 #*************************************************
 from ply import lex as lex
 
-class HDLLexError(Exception):
+class QHDLLexError(Exception):
 
     def __init__(self, token, lineno, linepos):
-        super(HDLLexError, self).__init__()
+        super(QHDLLexError, self).__init__()
         self.token = token
         self.lineno = lineno
         self.linepos = linepos
@@ -126,7 +126,7 @@ def t_newline(t):
 t_ignore = r' '
 
 def t_error(t):
-    raise HDLLexError(t, t.lexer.lineno,
+    raise QHDLLexError(t, t.lexer.lineno,
                       t.lexpos-t.lexer.startLinePos-1)
 
 # Build the lexer

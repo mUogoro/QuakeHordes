@@ -8,7 +8,6 @@ import operator
 # Defined types
 TYPES = {'Map': {'name':'string',
                  'introMessage':'string',
-                 'difficult':'string',
                  'width':'int',
                  'height':'int',
                  'type':'string',
@@ -37,8 +36,7 @@ TYPES = {'Map': {'name':'string',
 
 # Defined methods (work only on lists) 
 METHODS = {'add':getattr(list, 'append'),
-           'remove':getattr(list, 'remove'),
-           'index':getattr(list, 'index')}
+           'remove':getattr(list, 'remove')}
 
 
 # Symbol class
@@ -107,11 +105,11 @@ class Env(object):
 
 
 # Exceptions raised for execution errors
-class HDLTypeError(Exception):
+class QHDLTypeError(Exception):
 
     def __init__(self, typeFound, typeExpected,
                  lineno, linepos):
-        super(HDLTypeError, self).__init__()
+        super(QHDLTypeError, self).__init__()
         self.typeFound = typeFound
         self.typeExpected = typeExpected
         self.lineno = lineno
@@ -124,11 +122,11 @@ class HDLTypeError(Exception):
              self.typeExpected, self.typeFound)
 
 
-class HDLAttrError(Exception):
+class QHDLAttrError(Exception):
 
     def __init__(self, _type, attrName, lineno, linepos,
                  isMethod=False):
-        super(HDLAttrError, self).__init__()
+        super(QHDLAttrError, self).__init__()
         self.type = _type
         self.attrName = attrName
         self.lineno = lineno
@@ -147,10 +145,10 @@ class HDLAttrError(Exception):
                  self.type, self.attrName)
 
 
-class HDLIndexError(Exception):
+class QHDLIndexError(Exception):
 
     def __init__(self, index, lineno, linepos):
-        super(HDLIndexError, self).__init__()
+        super(QHDLIndexError, self).__init__()
         self.index = index
         self.lineno = lineno
         self.linepos = linepos
@@ -161,11 +159,11 @@ class HDLIndexError(Exception):
             (self.lineno, self.linepos)
 
 
-class HDLNameError(Exception):
+class QHDLNameError(Exception):
 
     def __init__(self, name, lineno, linepos, 
                  alreadyDecl=False):
-        super(HDLNameError, self).__init__()
+        super(QHDLNameError, self).__init__()
         self.name = name
         self.lineno = lineno
         self.linepos = linepos
@@ -209,7 +207,7 @@ class DeclNode(AstNode):
         # Search for already declared variables
         try:
             scope.get(name)
-            raise HDLNameError(name, self.lineno,
+            raise QHDLNameError(name, self.lineno,
                                self.linepos, True)
         except KeyError:
             pass
@@ -256,7 +254,7 @@ class AssignNode(AstNode):
         if lval.type == rval.type:
             lval.value = rval.value
         else:
-            raise HDLTypeError(rval.type, lval.type,
+            raise QHDLTypeError(rval.type, lval.type,
                                rvalNode.lineno,
                                rvalNode.linepos)
 
@@ -301,7 +299,7 @@ class VarNode(AstNode):
         try:
             val = scope.search(varName)
         except KeyError, e:
-            raise HDLNameError(varName, 
+            raise QHDLNameError(varName, 
                                self.lineno,
                                self.linepos)
 
@@ -312,7 +310,7 @@ class VarNode(AstNode):
                 else:
                     raise IndexError()
             except IndexError, e:
-                raise HDLIndexError(varOffset,
+                raise QHDLIndexError(varOffset,
                                     self.lineno,
                                     self.linepos+len(varName)+1)
 
@@ -323,7 +321,7 @@ class VarNode(AstNode):
             try:
                 val = attr.action(scope)
             except KeyError, e:
-                raise HDLAttrError(val.type,
+                raise QHDLAttrError(val.type,
                                    attr.childs[0],
                                    attr.lineno,
                                    attr.linepos)
@@ -346,7 +344,7 @@ class AttrNode(AstNode):
                 else:
                     raise IndexError()
             except IndexError, e:
-                raise HDLIndexError(attrOffset,
+                raise QHDLIndexError(attrOffset,
                                     self.lineno,
                                     self.linepos+len(attrName)+1)
 
@@ -357,7 +355,7 @@ class AttrNode(AstNode):
             try:
                 val = attr.action(scope)
             except KeyError, e:
-                raise HDLAttrError(val.type,
+                raise QHDLAttrError(val.type,
                                    attr.childs[0],
                                    attr.lineno,
                                    attr.linepos)
@@ -381,7 +379,7 @@ class MethodCallNode(AstNode):
         except KeyError, e:
             methodLinepos = self.childs[1][-1].linepos + \
                 len(var.id) + 1
-            raise HDLAttrError(var.type, methName,
+            raise QHDLAttrError(var.type, methName,
                                methVar.lineno,
                                #methVar.linepos,
                                methodLinepos,
@@ -393,7 +391,7 @@ class MethodCallNode(AstNode):
         for arg in methArgs:
             argSym = arg.action(scope)
             if argSym.type != var.type[:-2]:
-                raise HDLTypeError(argSym.type, var.type,
+                raise QHDLTypeError(argSym.type, var.type,
                                    arg.lineno, arg.linepos)
             #args.append(argSym)
             

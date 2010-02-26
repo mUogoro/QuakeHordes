@@ -11,10 +11,10 @@ from lexer import tokens
 from parser_internals import *
 
 
-class HDLSyntaxError(Exception):
+class QHDLSyntaxError(Exception):
 
     def __init__(self, token, lineno, linepos):
-        super(HDLSyntaxError, self).__init__()
+        super(QHDLSyntaxError, self).__init__()
         self.token = token
         self.lineno = lineno
         self.linepos = linepos
@@ -278,7 +278,7 @@ def p_arg(p):
 
 
 def p_error(p):
-    raise HDLSyntaxError(p.type,
+    raise QHDLSyntaxError(p.type,
                          p.lineno,
                          p.lexpos-p.lexer.startLinePos-1)
 
@@ -288,6 +288,6 @@ def p_error(p):
 #************************************
 
 # Build the parser
-def BuildHDLParser(workDir):
+def BuildQHDLParser(workDir):
   #parser = yacc.yacc(debug=True)
   return yacc.yacc(outputdir=workDir)

@@ -30,9 +30,9 @@ class Map(object):
     VALID = {'type':['cage', 'walls']}
 
     def __init__(self, symbols):
-        self.name = symbols['name'].value
+        # Replace spaces with underscores in map names
+        self.name = symbols['name'].value.replace(' ', '_')
         self.introMessage = symbols['introMessage'].value
-        self.difficult = symbols['difficult'].value
         self.width = MeterToQuake(symbols['width'].value)
         self.height = MeterToQuake(symbols['height'].value)
         self.type = symbols['type'].value

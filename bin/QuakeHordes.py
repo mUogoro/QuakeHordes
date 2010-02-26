@@ -6,10 +6,11 @@ from subprocess import Popen, PIPE
 from optparse import OptionParser
 
 #from quakehordes import ENV, parser, Map
-from quakehordes import ENV, Map, BuildHDLParser
+from quakehordes import ENV, Map, BuildQHDLParser
 from quakehordes import \
-    HDLLexError, HDLSyntaxError, \
-    HDLTypeError, HDLAttrError, HDLIndexError, HDLNameError
+    QHDLLexError, QHDLSyntaxError, \
+    QHDLTypeError, QHDLAttrError, QHDLIndexError, \
+    QHDLNameError
 
 
 def Build(_map):
@@ -89,15 +90,15 @@ def main():
 
             print "Parse [%s]" % src
             code = ''.join([line for line in f])
-            parser = BuildHDLParser(workDir)
+            parser = BuildQHDLParser(workDir)
 
             try:
                 ast = parser.parse(code, tracking=True)
                 print "Execute code"
                 ast.action(ENV)
-            except (HDLLexError, HDLSyntaxError,
-                    HDLTypeError, HDLAttrError,
-                    HDLIndexError, HDLNameError), e:
+            except (QHDLLexError, QHDLSyntaxError,
+                    QHDLTypeError, QHDLAttrError,
+                    QHDLIndexError, QHDLNameError), e:
                 print e
                 print "Map generation aborted."
                 continue
@@ -118,7 +119,7 @@ def main():
 
             # Come back to previous directory
             chdir(currDir)
-
+            print "Done"
 
 if __name__ == '__main__':
     exit(main())
