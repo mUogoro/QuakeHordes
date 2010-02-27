@@ -4,6 +4,7 @@
 # Parser for the Hordes Definition Language
 #*************************************************
 import types
+import logging
 from ply import yacc as yacc
 
 # Get the tokens from the lexer
@@ -78,7 +79,6 @@ def p_statement(p):
                  | print_stmt
                  | for_stmt
                  | if_stmt'''
-    print p
     p[0] = p[1]
 
 
@@ -290,5 +290,6 @@ def p_error(p):
 
 # Build the parser
 def BuildQHDLParser(workDir):
-  #parser = yacc.yacc(debug=True)
-  return yacc.yacc(outputdir=workDir)
+    # WARNING: reenable logging if problems occurs
+    return yacc.yacc(outputdir=workDir,
+                     errorlog=yacc.NullLogger())

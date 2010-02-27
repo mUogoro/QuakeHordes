@@ -4,6 +4,7 @@ import sys
 from os import mkdir, chdir, path, uname
 from subprocess import Popen, PIPE
 from optparse import OptionParser
+from datetime import datetime
 
 #from quakehordes import ENV, parser, Map
 from quakehordes import ENV, Map, BuildQHDLParser
@@ -11,6 +12,7 @@ from quakehordes import \
     QHDLLexError, QHDLSyntaxError, \
     QHDLTypeError, QHDLAttrError, QHDLIndexError, \
     QHDLNameError
+from quakehordes import initLogger, log
 
 
 def Build(_map):
@@ -37,14 +39,15 @@ def Build(_map):
     pCompiler = Popen([exe, _map.name+'.map'],
                       stdout=PIPE, stderr=PIPE)
     pCompiler.wait()
-    #pCompiler = Popen(exe,
-    #                  stdout=PIPE, stderr=PIPE)
+    pExit = pCompiler.communicate()
+
     if pCompiler.returncode != 0:
-        # Map compilation fails!!! 
+        # Map compilation fails!!!
+        log('Map compilation fails!!! Error:\n\n%s\n' % \
+                pExit[1], 'error')
         return False
     else:
-        # TO DO: what to do with output?
-        pExit = pCompiler.communicate()
+        log('Map compilation success!!!', 'info')
 
     return True
 
@@ -88,38 +91,61 @@ def main():
             currDir = path.realpath(path.curdir)
             chdir(workDir)
 
-            print "Parse [%s]" % src
+            #print "Parse [%s]" % src
+            # Start the parsing of the file
             code = ''.join([line for line in f])
             parser = BuildQHDLParser(workDir)
-
             try:
                 ast = parser.parse(code, tracking=True)
-                print "Execute code"
+                #print "Execute code"
+                # Parsing done. Start the program execution
+                # (AST traversal)
                 ast.action(ENV)
             except (QHDLLexError, QHDLSyntaxError,
                     QHDLTypeError, QHDLAttrError,
                     QHDLIndexError, QHDLNameError), e:
                 print e
-                print "Map generation aborted."
+                #print "Map generation aborted."
+                # Error executing the program. Skip to next
+                # source file specified
                 continue
 
-            print "Start maps generation"
+            #print "Start maps generation"
+            
+            # Start logging
+            d = datetime.now()
+            initLogger('%d%d%d-%s-build.log' % \
+                           (d.year,
+                            d.month,
+                            d.day,
+                            src[src.rfind(path.sep)+1:]))
+            log('Start maps generation for source file [%s]' % \
+                    src, 'info')
+            
             for key, sym in ENV.globalScope.items():
                 if sym.type == 'Map':
                     m = Map(sym.value)
                     if m.name == '':
                         m.name = 'Map%d' % i
-                    print "Build map [%s]" % m.name
+                        log('Map with no defined name found. Set name as [%s]' % \
+                                m.name, 'debug')
+
+                    #print "Build map [%s]" % m.name
+                    log('Map [%s] found. Start the building process' % \
+                            m.name, 'info')
                     if not Build(m):
-                        print "Map [%s] building aborted." % \
-                            m.name
+                        #print "Map [%s] building aborted." % \
+                        #    m.name
+                        log('Map [%s] building aborted.' % \
+                            m.name, 'error')
+
                     if installPath is not None:
                         Install(m, installPath)
                     i += 1
 
             # Come back to previous directory
             chdir(currDir)
-            print "Done"
+            log("Done", 'info')
 
 if __name__ == '__main__':
     exit(main())

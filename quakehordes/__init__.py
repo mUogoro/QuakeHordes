@@ -5,4 +5,5 @@ from parser import QHDLSyntaxError
 from parser_internals import \
     QHDLTypeError, QHDLAttrError, QHDLIndexError, \
     QHDLNameError
-from backend import Map, Horde, Monster, Player
+from backend import Map, Horde, Monster, Player, Item, \
+    initLogger, log

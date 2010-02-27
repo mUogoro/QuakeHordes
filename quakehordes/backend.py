@@ -2,6 +2,7 @@
 # backend_internals.py
 #
 #*************************************************
+import logging
 from sys import stdout, stderr
 from math import sin, cos, pi
 from backend_internals import *
@@ -17,6 +18,23 @@ MAP_WIDTH = 666
 MAP_HEIGHT = 666
 PLAYER_X = 0
 PLAYER_Y = 0
+
+
+# Validation logger
+def initLogger(logFileName):
+    logging.basicConfig(filename=logFileName,
+                        filemode='a',
+                        level=logging.DEBUG,
+                        format='%(asctime)s:%(filename)s:%(lineno)d: %(levelname)s - %(message)s')
+
+    
+def log(msg, _type='info'):
+    logFunc = getattr(logging, _type)
+    logFunc(msg)
+
+
+class ValidationError(Exception):
+    pass
 
 
 class Map(object):
@@ -194,7 +212,8 @@ class Map(object):
         if self.type == '':
             self.type = 'cage'
         elif self.type not in Map.VALID['type']:
-            stderr.write("Warning: invalid map type for map [%s]\n" % self.name)
+            log("Invalid map type for map [%s]" % \
+                    self.name, 'warning')
             return False
 
         # Build players start point. If no player start
@@ -273,7 +292,8 @@ class Map(object):
                 self.hordes.append(horde)
 
         if len(self.hordes) == 0:
-            stderr.write("Warning: no valid hordes specified for map [%s]\n" % self.name)
+            log("No valid hordes specified for map [%s]" % \
+                    self.name, 'warning')
             return False
 
         # Add items
@@ -403,7 +423,8 @@ class Horde(object):
                 self.y > boundY or \
                 self.fireX > boundX or \
                 self.fireY > boundY:
-            stderr.write("Warning: invalid position specified for horde [%s]\n" % self.id)
+            log("Invalid position specified for horde [%s]" % self.id,
+                'warning')
             return False
 
         # Set a default name for horde if no name was
@@ -496,7 +517,8 @@ class Horde(object):
                 self._buildHordeFlames()
             return True
         else:
-            stderr.write("Warning: no valid monster specified for horde [%s]\n" % self.id)
+            log("No valid monster specified for horde [%s]" % \
+                    self.id, "warning")
             return False
 
 
@@ -549,10 +571,10 @@ class Monster(object):
         elif self.type not in Monster.VALID['type']:
             # Wrong tyep specified: warn the user and
             # return false
-            stderr.write("Warning: invalid type [%s] of monster [%s] on horde [%s]\n" % \
-                             (self.type,
-                              self.id,
-                              self.hordeName))
+            log("Invalid type [%s] of monster [%s] on horde [%s]" % \
+                    (self.type,
+                     self.id,
+                     self.hordeName), "warning")
             return False
         return True
 
@@ -565,18 +587,18 @@ class Monster(object):
         elif self.type not in Monster.VALID['type']:
             # Wrong tyep specified: warn the user and
             # return false
-            stderr.write("Warning: invalid type [%s] of monster [%s] on horde [%s]\n" % \
-                             (self.type,
-                              self.id,
-                              self.hordeName))
+            log("Invalid type [%s] of monster [%s] on horde [%s]" % \
+                    (self.type,
+                     self.id,
+                     self.hordeName), 'warning')
             return False
 
         # Check the monster position
         if self.x > (boundX-32) or \
                 self.y > (boundY-32):
-            stderr.write("Warning: invalid position specified for monster [%s] of horde [%s]\n" % \
-                             (self.id,
-                              self.hordeName))
+            log("Invalid position specified for monster [%s] of horde [%s]" % \
+                    (self.id,
+                     self.hordeName), 'warning')
             return False
 
         # Create the monster
@@ -660,7 +682,7 @@ class Item(object):
         # Check position
         if self.x > boundX or \
                 self.y > boundY:
-            stderr.write("Warning: invalid position for item [%s]\n" % self.id)
+            log("Invalid position for item [%s]" % self.id, 'warning')
             return False
 
         # Check type, subType and size. If no type is
@@ -675,7 +697,7 @@ class Item(object):
         # Setup health item
         elif self.type == 'health':
             if not self.size in Item.VALID['size']:
-                stderr.write("Warning: invalid size for health [%s]\n" % self.id)
+                log("Invalid size for health [%s]" % self.id, 'warning')
                 return False
             self.item = Health(self.id, self.size,
                                self.x, self.y, 25)
@@ -683,7 +705,8 @@ class Item(object):
         # Setup armor item
         elif self.type == 'armor':
             if not self.size in Item.VALID['size']:
-                stderr.write("Warning: invalid size for ammo [%s]\n" % self.id)
+                log("Invalid size for ammo [%s]" % \
+                        self.id, 'warning')
                 return False
             self.item = Armor(self.id, self.size,
                               self.x, self.y, 25)
@@ -692,7 +715,7 @@ class Item(object):
         elif self.type == 'artifact':
             if not self.subType in \
                     Item.VALID['type']['artifact']:
-                stderr.write("Warning: invalid sub-type for artifact [%s]\n" % self.id)
+                log("Invalid sub-type for artifact [%s]" % self.id, 'warning')
                 return False
             self.item = Artifact(self.id, self.subType,
                                  self.x, self.y, 25)
@@ -700,11 +723,12 @@ class Item(object):
         # Setup ammo item
         elif self.type == 'ammo':
             if not self.size in Item.VALID['size']:
-                stderr.write("Warning: invalid size for ammo [%s]\n" % self.id)
+                log("Invalid size for ammo [%s]" % self.id,
+                    'warning')
                 return False
             if not self.subType in \
                     Item.VALID['type']['ammo']:
-                stderr.write("Warning: invalid sub-type for ammo [%s]\n" % self.id)
+                log("Invalid sub-type for ammo [%s]" % self.id, 'warning')
                 return False
             self.item = Ammo(self.id, self.subType,         
                              self.size, self.x, self.y, 25)
@@ -713,13 +737,14 @@ class Item(object):
         elif self.type == 'weapon':
             if not self.subType in \
                     Item.VALID['type']['weapon']:
-                stderr.write("Warning: invalid sub-type for weapon [%s]\n" % self.id)
+                log("Invalid sub-type for weapon [%s]" % self.id, 'warning')
                 return False
             self.item = Weapon(self.id, self.subType,
                                self.x, self.y, 25)
         
         else:
-            stderr.write("Warning: invalid type for item [%s]\n" % self.id)
+            log("Invalid type for item [%s]" % self.id,
+                'warning')
             return False
 
         return True
