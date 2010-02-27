@@ -18,9 +18,6 @@ MAP_HEIGHT = 666
 PLAYER_X = 0
 PLAYER_Y = 0
 
-class ValidateException(Exception):
-    pass
-
 
 class Map(object):
 
@@ -75,13 +72,13 @@ class Map(object):
 
 
         # Build walls bars
-        step = 40
-        barWidth = 20
-        barHeight = 20
-        barLenght = 200
+        step = 32
+        barWidth = 16
+        barHeight = 16
+        barLenght = 256
         n = 0
         for i in range(max(self.width, self.height)/step):
-            if n < self.width:
+            if n <= self.width:
                 brush1a = Brush('cage_0x_'+str(i),
                                 material='wood')
                 brush1a.scale(barWidth, barHeight, barLenght)
@@ -92,7 +89,7 @@ class Map(object):
                 brush1b.translate(n, self.height, 0)
                 self.cage.append(brush1a)
                 self.cage.append(brush1b)
-            if n < self.height:
+            if n <= self.height:
                 brush2a = Brush('cage_0y_'+str(i),
                                 material='wood')
                 brush2a.scale(barWidth, barHeight, barLenght)
@@ -105,7 +102,7 @@ class Map(object):
                 self.cage.append(brush2b)
 
             n += step
-            if n > max(self.width, self.height):
+            if n > max(self.width, self.height)+step:
                 break
 
         self.brushes.extend(self.cage)
@@ -196,13 +193,13 @@ class Map(object):
         # Check the map type
         if self.type == '':
             self.type = 'cage'
-        elif self.type not in MAP.VALID['type']:
-            stderr.write("Warning: invalid map type for map [%s]" % self.id)
+        elif self.type not in Map.VALID['type']:
+            stderr.write("Warning: invalid map type for map [%s]\n" % self.name)
             return False
 
         # Build players start point. If no player start
         # point is specified, define a default one
-        if len(self.players) == 0:
+        if len(self.sPlayers) == 0:
             self.players.append(Player('%s_singleplayer' % \
                                            self.name,
                                        self.width/2,
@@ -210,16 +207,20 @@ class Map(object):
 
         else:
             playerName = self.name + '_singleplayer'
-            playerX = self.sPlayers[0].value['x'].value
-            playerY = self.sPlayers[0].value['y'].value
+            playerX = MeterToQuake(\
+                self.sPlayers[0].value['x'].value)
+            playerY = MeterToQuake(\
+                self.sPlayers[0].value['y'].value)
             self.players.append(Player(playerName,
                                        playerX,
                                        playerY,
                                        25))
             for playerSym in self.sPlayers[1:]:
                 playerName = self.name + '_playercoop'
-                playerX = playerSym.value['x'].value
-                playerY = playerSym.value['y'].value
+                playerX = MeterToQuake(\
+                    playerSym.value['x'].value)
+                playerY = MeterToQuake(\
+                    playerSym.value['y'].value)
                 self.players.append(Player(playerName,
                                            playerX,
                                            playerY,
@@ -234,7 +235,7 @@ class Map(object):
             # the map)
             x = 0
             y += 200
-            z = -400
+            z = -800
 
             if hordeSym is self.sHordes[-1]:
                 # The last horde activates the exit doors
@@ -255,7 +256,7 @@ class Map(object):
                 # The horde is not the first horde and
                 # it's activated by the previous horde
                 nMonst = \
-                    len(self.sHordes[i-1]['monsters'].value)
+                    len(self.hordes[i-1].monsters)
                 horde = Horde(hordeId, hordeSym, self.name,
                               x, y, z,
                               isFired=True,
@@ -298,7 +299,7 @@ class Map(object):
                     self.width/2,
                     self.height/2,
                     isCounter=True,
-                    count=len(self.sHordes[-1]['monsters'].value))
+                    count=len(self.hordes[-1].monsters))
         return True
         
     
@@ -373,7 +374,28 @@ class Horde(object):
         self.monsters = []
         self.supBrush = None
         self.hordeTrigger = None
+        self.flames = []
         
+
+    def _buildHordeFlames(self, firstHorde = True):
+        if firstHorde:
+            _type = 'flame_large_yellow'
+        else:
+            _type = 'flame_small_yellow'
+        
+        angle = 0.0
+        angleStep = 0.52
+        radius = 25
+        x = self.fireX
+        y = self.fireY
+        for i in range(0,12):
+            flameX = x + radius*cos(angle)
+            flameY = y + radius*sin(angle)
+            self.flames.append(Flame("%s_flame%d" % \
+                                         (self.id, i),
+                                     _type, 2, flameX, flameY, 0))
+            angle += angleStep
+
 
     def setup(self, boundX, boundY):
         # Check if specified position is inside the map area
@@ -401,6 +423,7 @@ class Horde(object):
 
         # Create the horde trigger
         if self.isFired:
+            # Horde triggered by the previous horde
             hordeTrigger = Trigger(self.id,
                                    self.x, self.y, 10,
                                    delay=self.delay,
@@ -408,12 +431,15 @@ class Horde(object):
                                    isCounter=True,
                                    count=self.fireCount)
         else:
+            # Horde triggered when the player walk upon
+            # a specific map position
             hordeTrigger = Trigger(self.id,
                                    delay=self.delay,
                                    message=self.message)
             hordeTrigger.brush.scale(20, 20, 1)
             hordeTrigger.translate(self.fireX,
                                    self.fireY, 1)
+            
         self.hordeTrigger = hordeTrigger
 
         # Create monsters and their destinations
@@ -466,6 +492,8 @@ class Horde(object):
                     angleStep -= 0.2
 
         if len(self.monsters) > 0:
+            if not self.isFired:
+                self._buildHordeFlames()
             return True
         else:
             stderr.write("Warning: no valid monster specified for horde [%s]\n" % self.id)
@@ -480,6 +508,10 @@ class Horde(object):
         # Generate monsters
         retVal += '\n%s\n' % ''.join(
             [str(monster) for monster in self.monsters])
+
+        # Generate flames
+        retVal += ''.join([str(flame)
+                           for flame in self.flames])
 
         return retVal
 
@@ -540,8 +572,8 @@ class Monster(object):
             return False
 
         # Check the monster position
-        if self.x > boundX or \
-                self.y > boundY:
+        if self.x > (boundX-32) or \
+                self.y > (boundY-32):
             stderr.write("Warning: invalid position specified for monster [%s] of horde [%s]\n" % \
                              (self.id,
                               self.hordeName))

@@ -78,6 +78,7 @@ def p_statement(p):
                  | print_stmt
                  | for_stmt
                  | if_stmt'''
+    print p
     p[0] = p[1]
 
 

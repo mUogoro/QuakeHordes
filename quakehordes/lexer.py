@@ -119,7 +119,7 @@ def t_comment(t):
     pass
 
 def t_newline(t):
-    r'\n+'
+    r'\r*\n+'
     t.lexer.lineno += len(t.value)
     t.lexer.startLinePos = t.lexpos
 

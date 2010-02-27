@@ -152,15 +152,39 @@ class Trigger(MovableEntity):
 }
 ''' % (self.id, self.delay, self.message, str(self.brush))
         else:
+            # Trigger only used for display the message
+            # for trigger conters
             retVal = '''{
+"classname" "trigger_once"
+"target" "%s_trigger"
+"targetname" "%s_trigger_message"
+"message" "%s"
+"spawnflags" "1"
+%s
+}
+''' % (self.id, self.id, self.message, str(self.brush))
+            retVal += '''{
 "classname" "trigger_counter"
 "origin" "%d %d %d"
-"target" "%s_trigger"
+"target" "%s_trigger_message"
 "targetname" "%s_fire"
+"spawnflags" "1"
 "count" "%d"
 }
 ''' % (self.pos[0], self.pos[1], self.pos[2],
        self.id, self.id, self.count)
+
+#            retVal = '''{
+#"classname" "trigger_counter"
+#"origin" "%d %d %d"
+#"target" "%s_trigger"
+#"targetname" "%s_fire"
+#"spawnflags" "1"
+#"count" "%d"
+#}
+#''' % (self.pos[0], self.pos[1], self.pos[2],
+#       self.id, self.id, self.count)
+
         return retVal
 
 
@@ -183,7 +207,7 @@ class ChangeLevelTrigger(MovableEntity):
 "map" "%s"
 %s
 }
-''' % (self.id, str(self.brush))
+''' % (self.id.replace(' ', '_'), str(self.brush))
         return retVal
 
 
@@ -247,7 +271,7 @@ class MonsterDestination(MovableEntity):
         retVal = '''{
 "classname" "info_teleport_destination"
 "origin" "%d %d %d"
-"angle" "0.0"
+"angle" "180"
 "targetname" "%s_destination"
 }
 ''' % (self.pos[0], self.pos[1], self.pos[2], self.id)
@@ -270,9 +294,10 @@ class MonsterEntity(MovableEntity):
 "origin" "%s %s %s"
 "spawnflags" "1"
 "target" "%s"
+"targetname" "%s"
 }
 ''' % (self.type, self.pos[0], self.pos[1], self.pos[2],
-       self.target)
+       self.target, self.id)
         return retVal
 
 
@@ -380,4 +405,24 @@ class Weapon(MovableEntity):
 "origin" "%d %d %d"
 }
 ''' % (self.type, self.pos[0], self.pos[1], self.pos[2])
+        return retVal
+
+
+class Flame(MovableEntity):
+
+    def __init__(self, _id, _type, brightness=2,
+                 x=None, y=None, z=None):
+        super(Flame, self).__init__(_id, x, y, z)
+        self.type = _type
+        self.brightness = brightness
+
+
+    def __str__(self):
+        retVal = '''{
+"classname" "light_%s"
+"origin" "%d %d %d"
+"light" %d
+}
+''' % (self.type, self.pos[0], self.pos[1], self.pos[2],
+       self.brightness)
         return retVal
