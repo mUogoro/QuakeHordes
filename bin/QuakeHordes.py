@@ -47,8 +47,8 @@ def Build(_map):
 
     if pCompiler.returncode != 0:
         # Map compilation fails!!!
-        log('Map compilation fails!!! Error:\n\n%s\n' % \
-                pExit[1], 'error')
+        log('Map compilation fails!!! Error:\nSTDOUT: %s\nSTDERR: %s' % \
+                (pExit[0], pExit[1]), 'error')
         return False
     else:
         log('Map compilation success!!!', 'info')

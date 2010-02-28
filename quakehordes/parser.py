@@ -290,6 +290,6 @@ def p_error(t):
 
 # Build the parser
 def BuildQHDLParser(workDir):
-    # WARNING: reenable logging if problems occurs
+    # WARNING: reenable logging if problems occur
     return yacc.yacc(outputdir=workDir,
                      errorlog=yacc.NullLogger())

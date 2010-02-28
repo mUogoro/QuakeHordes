@@ -269,8 +269,8 @@ class Map(object):
         if self.type == '':
             self.type = Map.DEFAULTS['type']
         elif self.type not in Map.VALID['type']:
-            log("Invalid map type for map [%s]" % \
-                    self.name, 'warning')
+            log("Invalid map type [%s] for map [%s]" % \
+                    (self.type, self.name), 'warning')
             return False
 
         # Build players start point. If no player start
@@ -483,7 +483,7 @@ class Horde(object):
                 self.y > boundY or \
                 self.fireX > boundX or \
                 self.fireY > boundY:
-            log("Invalid position specified for horde [%s]" % self.id,
+            log("Invalid position [(%d, %d)] specified for horde [%s]" % (self.x, self.y, self.id),
                 'warning')
             return False
 
@@ -745,7 +745,8 @@ class Item(object):
         # Check position
         if self.x > boundX or \
                 self.y > boundY:
-            log("Invalid position for item [%s]" % self.id, 'warning')
+            log("Invalid position [(%d, %d)] for item [%s]" % \
+                    (self.x, self.y, self.id), 'warning')
             return False
 
         # Check type, subType and size. If no type is
@@ -760,7 +761,8 @@ class Item(object):
         # Setup health item
         elif self.type == 'health':
             if not self.size in Item.VALID['size']:
-                log("Invalid size for health [%s]" % self.id, 'warning')
+                log("Invalid size [%s] for health [%s]" % \
+                        (self.id, self.size), 'warning')
                 return False
             self.item = Health(self.id, self.size,
                                self.x, self.y, 25)
@@ -768,8 +770,8 @@ class Item(object):
         # Setup armor item
         elif self.type == 'armor':
             if not self.size in Item.VALID['size']:
-                log("Invalid size for ammo [%s]" % \
-                        self.id, 'warning')
+                log("Invalid size [%s] for ammo [%s]" % \
+                        (self.size, self.id), 'warning')
                 return False
             self.item = Armor(self.id, self.size,
                               self.x, self.y, 25)
@@ -778,7 +780,8 @@ class Item(object):
         elif self.type == 'artifact':
             if not self.subType in \
                     Item.VALID['type']['artifact']:
-                log("Invalid sub-type for artifact [%s]" % self.id, 'warning')
+                log("Invalid sub-type [%s] for artifact [%s]" % \
+                        (self.subType, self.id), 'warning')
                 return False
             self.item = Artifact(self.id, self.subType,
                                  self.x, self.y, 25)
@@ -788,7 +791,8 @@ class Item(object):
             if self.size == '':
                 self.size == 'medium'
             elif not self.size in Item.VALID['size']:
-                log("Invalid size for ammo [%s]" % self.id,
+                log("Invalid size [%s] for ammo [%s]" % \
+                        (self.size, self.id),
                     'warning')
                 return False
             
@@ -796,7 +800,8 @@ class Item(object):
                 self.subType == 'sheels';
             elif not self.subType in \
                     Item.VALID['type']['ammo']:
-                log("Invalid sub-type for ammo [%s]" % self.id, 'warning')
+                log("Invalid sub-type [%s] for ammo [%s]" %  \
+                        (self.subType, self.id), 'warning')
                 return False
             self.item = Ammo(self.id, self.subType,         
                              self.size, self.x, self.y, 25)
@@ -805,13 +810,15 @@ class Item(object):
         elif self.type == 'weapon':
             if not self.subType in \
                     Item.VALID['type']['weapon']:
-                log("Invalid sub-type for weapon [%s]" % self.id, 'warning')
+                log("Invalid sub-type [%s] for weapon [%s]" % \
+                        (self.subType, self.id), 'warning')
                 return False
             self.item = Weapon(self.id, self.subType,
                                self.x, self.y, 25)
         
         else:
-            log("Invalid type for item [%s]" % self.id,
+            log("Invalid type [%s] for item [%s]" % \
+                    (self.type, self.id),
                 'warning')
             return False
 
