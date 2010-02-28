@@ -7,7 +7,8 @@ from numpy import *
 
 class Brush(object):
         
-    def __init__(self, _id, material=None, planes=None):
+    def __init__(self, _id, material=None, planes=None,
+                 texX=1, texY=1):
         self.id = _id
         if material is None:
             self.material = "NULL"
@@ -30,6 +31,9 @@ class Brush(object):
                 [array([0, 0, 0, 1]), array([0, 1, 0, 1]),
                  array([0, 0, 1, 1])]
                 ]
+            
+        self.texX = texX
+        self.texY = texY
 
 
     def scale(self, x, y, z):
@@ -59,7 +63,8 @@ class Brush(object):
         for plane in self.planes:
             retVal += ''.join(['( %d %d %d ) ' % (v[0], v[1], v[2])
                                for v in plane])
-            retVal += '%s 0 0 0 1 1\n' % self.material
+            retVal += '%s 0 0 0 %d %d\n' % \
+                (self.material, self.texX, self.texY)
         return retVal + '}'
 
 

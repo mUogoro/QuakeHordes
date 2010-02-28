@@ -42,7 +42,14 @@ class Map(object):
     DEFAULTS = {'type':'cage', 
                 'width':666,
                 'height':666}
-    VALID = {'type':['cage', 'walls']}
+    VALID = {'type':['cage', 'walled']}
+
+    MATERIALS = {'walls_ground':('asphalt1', 8, 8 ),
+                 'walls':('tile2', 16, 16),
+                 'walls_exit':('metal1', 4, 8),
+                 'cage_ground':('grass2', 4, 4),
+                 'cage_bar':('wood1', 1, 1),
+                 'cage_exit':('metal1', 1, 1)}
 
     def __init__(self, symbols):
         # Replace spaces with underscores in map names
@@ -70,24 +77,39 @@ class Map(object):
         self.cage = []
         exitSize = 60
         # Build floor
-        floorA = Brush('floorA')
+        floorA = \
+            Brush('floorA',
+                  material=Map.MATERIALS['cage_ground'][0],
+                  texX=Map.MATERIALS['cage_ground'][1],
+                  texY=Map.MATERIALS['cage_ground'][2])
         floorA.scale(self.width/2-exitSize, self.height, 1)
         
-        floorB = Brush('floorB')
+        floorB = \
+            Brush('floorB',
+                  material=Map.MATERIALS['cage_ground'][0],
+                  texX=Map.MATERIALS['cage_ground'][1],
+                  texY=Map.MATERIALS['cage_ground'][2])
         floorB.scale(self.width/2-exitSize, self.height, 1)
         floorB.translate(self.width/2+exitSize, 0, 0)
 
-        floorC = Brush('floorC')
+        floorC = \
+            Brush('floorC',
+                  material=Map.MATERIALS['cage_ground'][0],
+                  texX=Map.MATERIALS['cage_ground'][1],
+                  texY=Map.MATERIALS['cage_ground'][2])
         floorC.scale(exitSize*2, self.height/2-exitSize, 1)
         floorC.translate(self.width/2-exitSize, 0, 0)
         
-        floorD = Brush('floorD')
+        floorD = \
+            Brush('floorD',
+                  material=Map.MATERIALS['cage_ground'][0],
+                  texX=Map.MATERIALS['cage_ground'][1],
+                  texY=Map.MATERIALS['cage_ground'][2])
         floorD.scale(exitSize*2, self.height/2-exitSize, 1)
         floorD.translate(self.width/2-exitSize,
                          self.height/2+exitSize, 0)
 
         self.cage.extend([floorA, floorB, floorC, floorD])
-
 
         # Build walls bars
         step = 32
@@ -97,23 +119,34 @@ class Map(object):
         n = 0
         for i in range(max(self.width, self.height)/step):
             if n <= self.width:
-                brush1a = Brush('cage_0x_'+str(i),
-                                material='wood')
+                brush1a = \
+                    Brush('cage_0x_'+str(i),
+                          material=Map.MATERIALS['cage_bar'][0],
+                          texX=Map.MATERIALS['cage_bar'][1],
+                          texY=Map.MATERIALS['cage_bar'][2])
                 brush1a.scale(barWidth, barHeight, barLenght)
                 brush1a.translate(n, 0, 0)
-                brush1b = Brush('cage_yx_'+str(i),
-                                material='wood')
+                brush1b = \
+                    Brush('cage_yx_'+str(i),
+                          material=Map.MATERIALS['cage_bar'][0],
+                          texX=Map.MATERIALS['cage_bar'][1],
+                          texY=Map.MATERIALS['cage_bar'][2])
                 brush1b.scale(barWidth, barHeight, barLenght)
                 brush1b.translate(n, self.height, 0)
                 self.cage.append(brush1a)
                 self.cage.append(brush1b)
             if n <= self.height:
-                brush2a = Brush('cage_0y_'+str(i),
-                                material='wood')
+                brush2a = \
+                    Brush('cage_0y_'+str(i),
+                          material=Map.MATERIALS['cage_bar'][0],
+                          texX=Map.MATERIALS['cage_bar'][1],
+                          texY=Map.MATERIALS['cage_bar'][2])
                 brush2a.scale(barWidth, barHeight, barLenght)
                 brush2a.translate(0, n, 0)
                 brush2b = Brush('cage_xy_'+str(i),
-                                material='wood')
+                      material=Map.MATERIALS['cage_bar'][0],
+                      texX=Map.MATERIALS['cage_bar'][1],
+                      texY=Map.MATERIALS['cage_bar'][2])
                 brush2b.scale(barWidth, barHeight, barLenght)
                 brush2b.translate(self.width, n, 0)
                 self.cage.append(brush2a)
@@ -128,26 +161,44 @@ class Map(object):
 
     def _buildWalls(self):
         # Build floor
-        self.brushes.append(Brush(self.name+'_main_brush',
-                                  material='grass2'))
+        self.brushes.append(\
+            Brush(self.name+'_main_brush',
+                  material=Map.MATERIALS['walls_ground'][0],
+                  texX=Map.MATERIALS['walls_ground'][1],
+                  texY=Map.MATERIALS['walls_ground'][2]))
         self.mainBrush = self.brushes[0]
         self.mainBrush.scale(self.width, self.height, 1.0)
 
         # Build walls
         exitSize = 60
-        wall1 = Brush('wall_1')
+        wall1 = Brush('wall_1',
+                      material=Map.MATERIALS['walls'][0],
+                      texX=Map.MATERIALS['walls'][1],
+                      texY=Map.MATERIALS['walls'][2])
         wall1.scale(self.width, 16, 256)
-        wall2 = Brush('wall_2')
+        wall2 = Brush('wall_2',
+                      material=Map.MATERIALS['walls'][0],
+                      texX=Map.MATERIALS['walls'][1],
+                      texY=Map.MATERIALS['walls'][2])
         wall2.scale(self.width, 16, 256)
         wall2.translate(0, self.height, 0)
-        wall3 = Brush('wall_3')
+        wall3 = Brush('wall_3',
+                      material=Map.MATERIALS['walls'][0],
+                      texX=Map.MATERIALS['walls'][1],
+                      texY=Map.MATERIALS['walls'][2])
         wall3.scale(16, self.height/2-exitSize, 256)
         wall3.translate(self.width, 0, 0)
-        wall4 = Brush('wall_4')
+        wall4 = Brush('wall_4',
+                      material=Map.MATERIALS['walls'][0],
+                      texX=Map.MATERIALS['walls'][1],
+                      texY=Map.MATERIALS['walls'][2])
         wall4.scale(16, self.height/2-exitSize, 256)
         wall4.translate(self.width,
                         self.height/2+exitSize , 0)
-        wall5 = Brush('wall_5')
+        wall5 = Brush('wall_5',
+                      material=Map.MATERIALS['walls'][0],
+                      texX=Map.MATERIALS['walls'][1],
+                      texY=Map.MATERIALS['walls'][2])
         wall5.scale(16, self.height, 256)
         self.brushes.extend([wall1, wall2, wall3,
                              wall4, wall5])
@@ -156,7 +207,10 @@ class Map(object):
     def _buildWallsExit(self):
         # Build exit door
         exitSize = 60
-        _exit = Door('exit_trigger')
+        _exit = Door('exit_trigger',
+                      material=Map.MATERIALS['walls_exit'][0],
+                      texX=Map.MATERIALS['walls_exit'][1],
+                      texY=Map.MATERIALS['walls_exit'][2])
         _exit.scale(16, exitSize*2, 256)
         _exit.translate(self.width,
                         self.height/2-exitSize, 0)
@@ -183,7 +237,10 @@ class Map(object):
         offset = 5
         exitSize = 60
         for i in range(0, (exitSize*2) / k):
-            bar = Door('exit_trigger')
+            bar = Door('exit_trigger',
+                      material=Map.MATERIALS['cage_exit'][0],
+                      texX=Map.MATERIALS['cage_exit'][1],
+                      texY=Map.MATERIALS['cage_exit'][2])
             bar.scale(10, exitSize*2, 10)
             bar.translate(self.width/2-exitSize+offset,
                           self.height/2-exitSize,
