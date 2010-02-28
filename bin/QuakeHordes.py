@@ -1,10 +1,12 @@
 #!/usr/bin/python
 
 import sys
-from os import mkdir, chdir, path, uname
+from os import mkdir, chdir, path, environ, listdir
 from subprocess import Popen, PIPE
 from optparse import OptionParser
 from datetime import datetime
+from shutil import copy2
+
 
 #from quakehordes import ENV, parser, Map
 from quakehordes import ENV, Map, BuildQHDLParser
@@ -23,12 +25,14 @@ def Build(_map):
     
     # Get the current platform and run the appropriate
     # compiler
-    platform = uname()[0]
-    if platform == 'Linux':
+    platform = sys.platform
+    if platform == 'linux2':
         exe = 'hmap2'
-    elif platform == 'Windows':
+    elif platform == 'win32':
         exe = 'hmap2.exe'
     else:
+        log('Unknown or unsupported platform [%s]' % \
+                platform, 'error')
         return False
 
     # Save the compiled map
@@ -53,7 +57,39 @@ def Build(_map):
 
 
 def Install(_map, installPath):
-    print "Install on [%s]" % installPath
+    try:
+        stuffsDir = environ['QUAKEHORDES_STUFFS']
+        # Create maps and textures directory if it doesn't exist
+        texsInstPath = path.join(installPath, 'textures')
+        mapInstPath = path.join(installPath, 'maps')
+        if not path.exists(texsInstPath):
+            mkdir(texsInstaPath)
+        if not path.exists(mapInstPath):
+            mkdir(mapInstPath)
+        
+        # Copy textures
+        texsDir = path.join(stuffsDir, 'textures')
+        for tex in listdir(texsDir):
+            if not path.exists(path.join(texsInstPath,
+                                         tex)):
+                copy2(path.join(texsDir, tex), texsInstPath)
+
+        # Copy map
+        copy2(_map.name+'.bsp', mapInstPath)
+    
+        log('Map [%s] successfully installed on path [%s]' %\
+                (_map.name, installPath), 'info')
+        return True
+
+    except KeyError, e:
+        log('Installation on path [%s] fails (maybe QUAKEHORDES_STUFFS environment variable unset???): %s' %\
+                (installPath, e), 'error')
+        return False
+
+    except OSError, e:
+        log('Installation on path [%s] fails: %s' % \
+                (installPath, e), 'error')
+        return False
 
 
 def ParseCmdLine():
@@ -76,6 +112,7 @@ def main():
     installPath = cmdLineArgs[0].installPath
     workDir = cmdLineArgs[0].workDir
 
+    builtMaps = 0
     for src in sources:
         i = 1
         # Parse and execute each specified file
@@ -83,12 +120,12 @@ def main():
 
             # Move to working dir. If no working dir is
             # specified, create a new one
-            if workDir is None:
-                workDir = 'tmp'
-                if not path.exists('tmp'):
-                    mkdir(workDir)
-            workDir = path.realpath(workDir)
             currDir = path.realpath(path.curdir)
+            if workDir is None:
+                workDir = path.join(curdir, 'tmp')
+            if not path.exists(workDir):
+                mkdir(workDir)
+            workDir = path.realpath(workDir)
             chdir(workDir)
 
             #print "Parse [%s]" % src
@@ -138,6 +175,9 @@ def main():
                         #    m.name
                         log('Map [%s] building aborted.' % \
                             m.name, 'error')
+                        continue
+
+                    builtMaps += 1
 
                     if installPath is not None:
                         Install(m, installPath)
@@ -146,6 +186,12 @@ def main():
             # Come back to previous directory
             chdir(currDir)
             log("Done", 'info')
+
+    if builtMaps:
+        return 0
+    else:
+        # No valid maps built!!!
+        return 1
 
 if __name__ == '__main__':
     exit(main())
