@@ -1,0 +1,67 @@
+# Simpler-of-simplest map definiont: one map with one horde
+# with one monster
+
+Map simpleMap;
+simpleMap.name = "My first map";
+simpleMap.type = "walled";
+
+Horde singleHorde;
+singleHorde.id = "singleHorde";
+Horde mapHordes[];
+
+Monster singleMonst;
+singleMonst.id = "singleMonst";
+singleMonst.type = "army";
+
+#print singleMonst.type;
+
+for each i in (0,5):
+  singleHorde.monsters.add(singleMonst);
+  #singleMonst.type = "wizard";
+end for
+
+
+mapHordes.add(singleHorde);
+#Map simpleMap2;
+#simpleMap.next = simpleMap2;
+simpleMap.hordes = mapHordes;
+
+simpleMap.width = 80;
+simpleMap.height = 60;
+
+#print "hordes";
+#print mapHordes;
+
+#simpleMap.hordes[0].monsters[1].type = "zombie";
+
+
+simpleMap.name = "My first great map";
+
+Player spam;
+spam.x = 10;
+spam.y = 10;
+simpleMap.players.add(spam);
+
+
+singleHorde.x = 30;
+singleHorde.y = 30;
+singleHorde.fireX = 20;
+singleHorde.fireY = 20;
+#print simpleMap.players[0].x;
+#print simpleMap.players[0].y;
+
+Item it;
+it.x = 20;
+it.y = 20;
+Item it2;
+it2.type = "artifact";
+it2.subType = "super_damage";
+it2.x = 20;
+it2.y = 20;
+Item it3;
+it3.type = "weapon";
+it3.subType = "rocketlauncher";
+it3.x = 20;
+it3.y = 20;
+simpleMap.items.add(it, it2, it3);
+#Item it;
