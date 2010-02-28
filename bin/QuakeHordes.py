@@ -122,7 +122,7 @@ def main():
             # specified, create a new one
             currDir = path.realpath(path.curdir)
             if workDir is None:
-                workDir = path.join(curdir, 'tmp')
+                workDir = path.join(path.curdir, 'tmp')
             if not path.exists(workDir):
                 mkdir(workDir)
             workDir = path.realpath(workDir)

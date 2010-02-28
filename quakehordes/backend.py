@@ -39,7 +39,7 @@ class ValidationError(Exception):
 
 class Map(object):
 
-    DEFAULTS = {'type':'cage', 
+    DEFAULTS = {'type':'walled', 
                 'width':666,
                 'height':666}
     VALID = {'type':['cage', 'walled']}
@@ -267,7 +267,7 @@ class Map(object):
     def setup(self):
         # Check the map type
         if self.type == '':
-            self.type = 'cage'
+            self.type = Map.DEFAULTS['type']
         elif self.type not in Map.VALID['type']:
             log("Invalid map type for map [%s]" % \
                     self.name, 'warning')
@@ -323,7 +323,10 @@ class Map(object):
             # If no id is specified for current horde,
             # define a new one
             if hordeSym['id'].value == '':
-                hordeId = "%s_horde%d" % (self.name, i)
+            #    hordeId = "%s_horde%d" % (self.name, i)
+                log('%d-th horde of map [%s] has no unique id' % \
+                        (i+1, self.name), 'error')
+                return False
             else:
                 hordeId = hordeSym['id'].value
 
@@ -597,8 +600,10 @@ class Horde(object):
 
 class Monster(object):
 
-    VALID = {'type':['army', 'enforcer', 'zombie', 'dog',
-                     'wizard']}
+    VALID = {'type':['army', 'demon1', 'dog', 'enforcer',
+                     'fish', 'hell_knight', 'knight',
+                     'ogre', 'shalrath', 'shambler',
+                     'tarbaby', 'wizard', 'zombie']}
     DEFAULTS = {'type':'army'}
 
     def __init__(self, _id, symbols, hordeName, x, y, z, 
@@ -652,23 +657,24 @@ class Monster(object):
 
         # Check the monster position
         if self.x > (boundX-32) or \
-                self.y > (boundY-32):
+                self.y > (boundY-32) or \
+                self.x < 32 or \
+                self.y < 32:
             log("Invalid position specified for monster [%s] of horde [%s]" % \
                     (self.id,
                      self.hordeName), 'warning')
             return False
 
         # Create the monster
-        monsterName = '%s_%s' % (self.hordeName, self.id)
         monster = \
-            MonsterEntity(monsterName, self.type,
+            MonsterEntity(self.id, self.type,
                           self.realX+50,
                           self.realY+50,
                           self.realZ+25,
                           self.nextHordeName+'_fire')
         self.monstEntity = monster
         # Create monster teleport
-        teleport = MonsterTeleport(monsterName)
+        teleport = MonsterTeleport(self.id)
         teleport.brush = Brush(teleport.id + \
                                    '_teleport_brush')
         teleport.brush.scale(80, 80, 1)
@@ -678,7 +684,7 @@ class Monster(object):
         self.teleport = teleport
 
         # Create the trigger
-        trigger = MonsterTrigger(monsterName,
+        trigger = MonsterTrigger(self.id,
                                  self.hordeName)
         trigger.brush = Brush(trigger.id + \
                                   '_trigger_brush')
@@ -688,7 +694,7 @@ class Monster(object):
         self.trigger = trigger
 
         # Create the destination
-        destination = MonsterDestination(monsterName,
+        destination = MonsterDestination(self.id,
                                          self.x,
                                          self.y,
                                          self.z)
@@ -779,11 +785,16 @@ class Item(object):
 
         # Setup ammo item
         elif self.type == 'ammo':
-            if not self.size in Item.VALID['size']:
+            if self.size == '':
+                self.size == 'medium'
+            elif not self.size in Item.VALID['size']:
                 log("Invalid size for ammo [%s]" % self.id,
                     'warning')
                 return False
-            if not self.subType in \
+            
+            if self.subType == '':
+                self.subType == 'sheels';
+            elif not self.subType in \
                     Item.VALID['type']['ammo']:
                 log("Invalid sub-type for ammo [%s]" % self.id, 'warning')
                 return False

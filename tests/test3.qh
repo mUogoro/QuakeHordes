@@ -1,0 +1,139 @@
+# Two simple cage-map: the first one load the second one
+# when finished and viceversa
+Map test3map1;
+Map test3map2;
+
+test3map1.name = "test3map1";
+test3map1.width = 300;
+test3map1.height = 100;
+test3map1.next = test3map2;
+
+Player p1;
+p1.x = 15;
+p1.y=50;
+test3map1.players.add(p1);
+
+Horde hordes[];
+
+Horde horde1;
+Horde horde2;
+Horde horde3;
+
+hordes.add(horde1, horde2, horde3);
+
+# ********* FIRST HORDE ***********#
+horde1.id = "horde1";
+horde1.x = 50;
+horde1.y = 50;
+horde1.fireX = 20;
+horde1.fireY = 50;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "ogre";
+  hordes[0].monsters.add(foo);
+end for
+
+Item items1[];
+for each i in (40,60):
+  Item it;
+  it.type = "ammo";
+  it.subType = "cells";
+  it.x = horde1.x;
+  it.y = i;
+  items1.add(it);
+end for
+
+Item weapon1;
+weapon1.type = "weapon";
+weapon1.subType = "lightning";
+weapon1.x = horde1.x;
+weapon1.y = horde1.y;
+items1.add(weapon1);
+
+
+# ********* SECOND HORDE ***********#
+horde2.id = "horde2";
+horde2.x = 150;
+horde2.y = 50;
+horde1.next = horde2;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "wizard";
+  hordes[1].monsters.add(foo);
+end for
+
+Item items2[];
+for each i in (40,60):
+  Item it;
+  it.type = "ammo";
+  it.subType = "rockets";
+  it.x = horde2.x;
+  it.y = i;
+  items2.add(it);
+end for
+
+
+Item weapon2;
+weapon2.type = "weapon";
+weapon2.subType = "rocketlauncher";
+weapon2.x = horde2.x;
+weapon2.y = horde2.y;
+items2.add(weapon2);
+
+
+# ********* THIRD HORDE ***********#
+horde3.id = "horde3";
+horde3.x = 250;
+horde3.y = 50;
+horde2.next = horde3;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "knight";
+  hordes[2].monsters.add(foo);
+end for
+
+Item items3[];
+for each i in (40,60):
+  Item it;
+  it.type = "ammo";
+  it.subType = "spikes";
+  it.x = horde3.x;
+  it.y = i;
+  items3.add(it);
+end for
+
+Item weapon3;
+weapon3.type = "weapon";
+weapon3.subType = "supernailgun";
+weapon3.x = horde3.x;
+weapon3.y = horde3.y;
+items3.add(weapon3);
+
+# Add the defined hordes to the first map
+test3map1.hordes = hordes;
+
+# Add items
+for each items1 as it:
+  test3map1.items.add(it);
+end for
+for each items2 as it:
+  test3map1.items.add(it);
+end for
+for each items3 as it:
+  test3map1.items.add(it);
+end for
+
+
+# Copy players, items and hordes of the first map into the
+# second map.
+test3map2.name = "test3map2";
+test3map2.type = "cage";
+test3map2.width = test3map1.width;
+test3map2.height = test3map1.height;
+test3map2.players = test3map1.players;
+test3map2.hordes = test3map1.hordes;
+test3map2.items = test3map1.items;
+test3map2.next = test3map1;

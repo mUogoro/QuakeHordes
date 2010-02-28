@@ -1,67 +1,80 @@
-# Simpler-of-simplest map definiont: one map with one horde
-# with one monster
+# Simple map with a horde of 10 different monster
+Map test1;
+test1.name = "test1";
+test1.width = 100;
+test1.height = 100;
 
-Map simpleMap;
-simpleMap.name = "My first map";
-simpleMap.type = "walled";
+# Create a new horde
+Horde test1horde;
+test1horde.id = "test1horde";
+test1horde.x = 70;
+test1horde.y = 60;
 
-Horde singleHorde;
-singleHorde.id = "singleHorde";
-Horde mapHordes[];
+# Fire the horde behind the player
+test1horde.fireX= 40;
+test1horde.fireY = 50;
 
-Monster singleMonst;
-singleMonst.id = "singleMonst";
-singleMonst.type = "army";
+# Fill the horde
+Monster monst1;
+monst1.type = "army";
 
-#print singleMonst.type;
+Monster monst2;
+monst2.type = "demon1";
 
-for each i in (0,5):
-  singleHorde.monsters.add(singleMonst);
-  #singleMonst.type = "wizard";
-end for
+Monster monst3;
+monst3.type = "dog";
 
+Monster monst4;
+monst4.type = "dog";
 
-mapHordes.add(singleHorde);
-#Map simpleMap2;
-#simpleMap.next = simpleMap2;
-simpleMap.hordes = mapHordes;
+Monster monst5;
+monst5.type = "knight";
 
-simpleMap.width = 80;
-simpleMap.height = 60;
+Monster monst6;
+monst6.type = "ogre";
 
-#print "hordes";
-#print mapHordes;
+Monster monst7;
+monst7.type = "knight";
 
-#simpleMap.hordes[0].monsters[1].type = "zombie";
+Monster monst8;
+monst8.type = "ogre";
 
+Monster monst9;
+monst9.type = "wizard";
 
-simpleMap.name = "My first great map";
+Monster monst10;
+monst10.type = "wizard";
 
-Player spam;
-spam.x = 10;
-spam.y = 10;
-simpleMap.players.add(spam);
+test1horde.monsters.add(monst1, monst2, monst3, monst4, monst5,
+                        monst6, monst7, monst8, monst9, monst10);
 
+# Add the horde to the map
+test1.hordes.add(test1horde);
 
-singleHorde.x = 30;
-singleHorde.y = 30;
-singleHorde.fireX = 20;
-singleHorde.fireY = 20;
-#print simpleMap.players[0].x;
-#print simpleMap.players[0].y;
+# Place some items behind the horde
+Item weapon1;
+weapon1.type = "weapon";
+weapon1.subType = "supernailgun";
+weapon1.x = 82;
+weapon1.y = test1horde.y;
 
-Item it;
-it.x = 20;
-it.y = 20;
-Item it2;
-it2.type = "artifact";
-it2.subType = "super_damage";
-it2.x = 20;
-it2.y = 20;
-Item it3;
-it3.type = "weapon";
-it3.subType = "rocketlauncher";
-it3.x = 20;
-it3.y = 20;
-simpleMap.items.add(it, it2, it3);
-#Item it;
+Item weapon2;
+weapon2.type = "weapon";
+weapon2.subType = "supershotgun";
+weapon2.x = 78;
+weapon2.y = test1horde.y;
+
+Item health;
+health.type = "health";
+health.size = "medium";
+health.x = 80;
+health.y = test1horde.y;
+
+# Finally, put a quad-damage item where the horde is fired
+Item quadDamage;
+quadDamage.type = "artifact";
+quadDamage.subType = "super_damage";
+quadDamage.x = test1.hordes[0].fireX;
+quadDamage.y = test1.hordes[0].fireY;
+
+test1.items.add(weapon1, weapon2, health, quadDamage);

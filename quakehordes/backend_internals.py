@@ -294,15 +294,19 @@ class MonsterEntity(MovableEntity):
     
 
     def __str__(self):
+        if self.type == 'zombie':
+            spawnFlag=2
+        else:
+            spawnFlag=1
         retVal = '''{
 "classname" "monster_%s"
 "origin" "%s %s %s"
-"spawnflags" "1"
+"spawnflags" "%d"
 "target" "%s"
 "targetname" "%s"
 }
 ''' % (self.type, self.pos[0], self.pos[1], self.pos[2],
-       self.target, self.id)
+       spawnFlag, self.target, self.id)
         return retVal
 
 

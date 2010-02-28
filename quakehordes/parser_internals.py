@@ -27,7 +27,7 @@ TYPES = {'Map': {'name':'string',
                     'type':'string'},
          'Item':{'type':'string',
                  'subType':'string',
-                 'size':'int',
+                 'size':'string',
                  'x':'int',
                  'y':'int'},
          'Player':{'x':'int',
@@ -391,7 +391,7 @@ class MethodCallNode(AstNode):
         for arg in methArgs:
             argSym = arg.action(scope)
             if argSym.type != var.type[:-2]:
-                raise QHDLTypeError(argSym.type, var.type,
+                raise QHDLTypeError(argSym.type, var.type[:-2],
                                    arg.lineno, arg.linepos)
             #args.append(argSym)
             
@@ -421,22 +421,27 @@ class ForNode(AstNode):
             # List iterator
             var = self.childs[0].action(scope)
             symName = self.childs[1]
-            sym = Symbol(symName, var.type[:-2], None)
+            symType = var.type[:-2]
             it = [s.value for s in var.value]
 
         except AttributeError:
             # Integers iterator
             it = self.childs[1]
             symName = self.childs[0]
-            sym = Symbol(symName, "int", None)
+            symType = "int"
         
         code = self.childs[2:]
+        # For each item in the iterator ...
         for i in it:
+            # ... create a new scope ...
             scope.push({})
-            scope.add(symName, sym)
-            scope.get(symName).value = i
+            # ... push the i-th item in the current scope
+            sym = Symbol(symName, symType, None)
+            sym.value = i
+            scope.set(symName, sym)
+            # ... and finally execute the for code-block
             for child in code:
-                child.action(scope)    
+                child.action(scope)
             scope.pop()
 
 

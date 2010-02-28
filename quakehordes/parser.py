@@ -22,8 +22,9 @@ class QHDLSyntaxError(Exception):
 
     
     def __str__(self):
-        return "Syntax error on %d:%d: unexpected token %s" % \
-            (self.lineno, self.linepos, self.token)
+        return "Syntax error on %d:%d: unexpected token [%s] of value [%s]" % \
+            (self.lineno, self.linepos,
+             self.token.type, self.token.value)
 
 
 # Global variables
@@ -278,10 +279,9 @@ def p_arg(p):
     p[0] = p[1]
 
 
-def p_error(p):
-    raise QHDLSyntaxError(p.type,
-                         p.lineno,
-                         p.lexpos-p.lexer.startLinePos-1)
+def p_error(t):
+    raise QHDLSyntaxError(t, t.lineno,
+                          t.lexpos-t.lexer.startLinePos-1)
 
 
 #************************************

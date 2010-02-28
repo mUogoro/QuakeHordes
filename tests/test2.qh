@@ -1,0 +1,98 @@
+# Define a large map with four hordes, each one with 20,
+# enemies. Eeach horde fires the next one, except for the
+# last horde which is fired when the player reaches the
+# position of a quad-damage item
+
+Map test2;
+test2.name = "test2";
+test2.width = 300;
+test2.height = 300;
+
+# Define the first horde (soldiers)
+Horde horde1;
+horde1.id = "horde1";
+horde1.x = 20;
+horde1.y = 150;
+horde1.fireX = 30;
+horde1.fireY = horde1.y;
+
+Monster monsts1[];
+for each i in (0, 20):
+  Monster spam;
+  spam.type = "army";
+  monsts1.add(spam);
+end for
+
+horde1.monsters = monsts1;
+
+# Define the second horde (wizards)
+Horde horde2;
+horde2.id = "horde2";
+horde2.x = 150;
+horde2.y = 120;
+
+Monster monsts2[];
+for each i in (0, 20):
+  Monster egg;
+  egg.type = "wizard";
+  monsts2.add(egg);
+end for
+
+horde2.monsters = monsts2;
+
+# The first horde fires the second one
+horde1.next = horde2;
+
+# Define the third horde (ogre)
+Horde horde3;
+horde3.id = "horde3";
+horde3.x = 150;
+horde3.y = 80;
+
+Monster monsts3[];
+for each i in (0, 20):
+  Monster foo;
+  foo.type = "ogre";
+  monsts3.add(foo);
+end for
+
+horde3.monsters = monsts3;
+
+# The second horde fires the third one
+horde2.next = horde3;
+
+
+# Put a quad-damage in front of the exit
+Item quadDamage;
+quadDamage.type = "artifact";
+quadDamage.subType = "super_damage";
+quadDamage.x = 270;
+quadDamage.y = 150;
+
+test2.items.add(quadDamage);
+
+# Define the fourth horde (demon1)
+Horde horde4;
+horde4.id = "horde4";
+horde4.x = 280;
+horde4.y = 150;
+horde4.fireX = quadDamage.x;
+horde4.fireY = quadDamage.y;
+
+Monster monsts4[];
+for each i in (0, 20):
+  Monster bar;
+  bar.type = "demon1";
+  monsts4.add(bar);
+end for
+
+horde4.monsters = monsts4;
+
+# Finally, add the horde to the map
+test2.hordes.add(horde1, horde2, horde3, horde4);
+
+# Finally, the player starts in front of the first horde
+Player p1;
+p1.x = 10;
+p1.y = horde1.fireY;
+test2.players.add(p1);
