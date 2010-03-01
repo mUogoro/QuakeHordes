@@ -63,7 +63,7 @@ def Install(_map, installPath):
         texsInstPath = path.join(installPath, 'textures')
         mapInstPath = path.join(installPath, 'maps')
         if not path.exists(texsInstPath):
-            mkdir(texsInstaPath)
+            mkdir(texsInstPath)
         if not path.exists(mapInstPath):
             mkdir(mapInstPath)
         
