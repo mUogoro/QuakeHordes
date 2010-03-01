@@ -31,8 +31,13 @@ class QHDLSyntaxError(Exception):
 ENV = Env()
 
 
+# Return the column position for symbol p
 def _retRuleLinepos(p, i):
-    return p.lexpos(i)-p.lexer.startLinePos-1
+    # fix for the parsing of the first line of code
+    try:
+        return p.lexpos(i)-p.lexer.startLinePos-1
+    except AttributeError:
+        return p.lexpos(i)
 
 #************************************
 # Grammar productions definition
@@ -40,6 +45,10 @@ def _retRuleLinepos(p, i):
 precedence = (('left', 'OR'),
               ('left', 'AND'),
               ('nonassoc', 'NOT'),
+              ('left', 'SUB'),
+              ('left', 'ADD'),
+              ('left', 'MULT'),
+              ('left', 'DIV'),
               ('nonassoc', 'O_ROUND'))
 
 def p_start_rule(p):
@@ -102,11 +111,14 @@ def p_lval(p):
 
 
 def p_rval(p):
-    '''rval : const_val
-            | attr_lookup'''
-    #p[0] = RvalNode(p.lineno(0), p.lexpos(0), p[1])
+    #'''rval : const_val
+    #        | attr_lookup
+    #        | exp'''
+    '''rval : exp'''
+        
+   #p[0] = RvalNode(p.lineno(0), p.lexpos(0), p[1])
     p[0] = RvalNode(p.lineno(0), 
-                    _retRuleLinepos(p, 0), p[1])
+                    _retRuleLinepos(p, 0), [p[1]])
 
 
 def p_const_val(p):
@@ -115,6 +127,66 @@ def p_const_val(p):
                  | QUOTED_STRING
     '''
     p[0] = p[1]
+
+
+def p_exp(p):
+    '''exp : exp ADD exp
+           | exp SUB exp
+           | exp MULT exp
+           | exp DIV exp
+           | O_ROUND exp O_ROUND
+           | attr_lookup
+           | const_val
+    '''
+    if len(p) == 2:
+        try:
+            # attr_lookup or string
+            if type(p[1]) is str:
+                p[0] = p[1]
+            else:
+                p[0] = p[1][0]
+        except TypeError:
+            # const_val
+            p[0] = p[1]
+
+    # Hack for position of operand: add them as childs
+    elif p[2] == '+':
+        op = operator.add
+        childs = [p[1], p[3], op,
+                  p.lineno(1), 
+                  _retRuleLinepos(p, 1),
+                  p.lineno(3), 
+                  _retRuleLinepos(p, 3)]
+        p[0] = ExpNode(p.lineno(0), 
+                       _retRuleLinepos(p, 0), childs)
+    elif p[2] == '-':
+        op = operator.sub
+        childs = [p[1], p[3], op,
+                  p.lineno(1), 
+                  _retRuleLinepos(p, 1),
+                  p.lineno(3), 
+                  _retRuleLinepos(p, 3)]
+        p[0] = ExpNode(p.lineno(0), 
+                       _retRuleLinepos(p, 0), childs)
+    elif p[2] == '/':
+        op = operator.div
+        childs = [p[1], p[3], op,
+                  p.lineno(1), 
+                  _retRuleLinepos(p, 1),
+                  p.lineno(3), 
+                  _retRuleLinepos(p, 3)]
+        p[0] = ExpNode(p.lineno(0), 
+                       _retRuleLinepos(p, 0), childs)
+
+    elif p[2] == '*':
+        op = operator.mul
+        childs = [p[1], p[3], op,
+                  p.lineno(1), 
+                  _retRuleLinepos(p, 1),
+                  p.lineno(3), 
+                  _retRuleLinepos(p, 3)]
+        p[0] = ExpNode(p.lineno(0), 
+                       _retRuleLinepos(p, 0), childs)
 
 
 def p_attr_lookup(p):
@@ -191,7 +263,7 @@ def p_range(p):
 def p_if_stmt(p):
     '''if_stmt : IF cond COLON code_lines ELSE COLON code_lines END IF
                | IF cond COLON code_lines END IF'''
-    if len(p) == 5:
+    if len(p) == 7:
         childs = [p[2], p[4], None]
     else:
         childs = [p[2], p[4], p[7]]
@@ -291,5 +363,6 @@ def p_error(t):
 # Build the parser
 def BuildQHDLParser(workDir):
     # WARNING: reenable logging if problems occur
+    #return yacc.yacc(outputdir=workDir)
     return yacc.yacc(outputdir=workDir,
                      errorlog=yacc.NullLogger())

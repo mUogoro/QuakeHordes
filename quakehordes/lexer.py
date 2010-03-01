@@ -34,63 +34,37 @@ reserved = {'if':'IF',
 types = ['Map', 'Horde', 'Monster', 'Item', 'Player']
 methods = ['add', 'remove', 'index']
 
-#tokens = list(reserved.values()) + \
-#    ['TYPE', 'ID', 'METHOD',
-#     'INT_VAL', 'REAL_VAL', 'QUOTED_STRING',
-#     'DOT', 'COLON', 'SEMICOLON', 'COMMA', 'EQUAL',
-#     'EQ', 'NEQ', 'GT', 'GET', 'LT', 'LET',
-#     'O_ROUND', 'C_ROUND', 'O_SQUARE', 'C_SQUARE']
-
 tokens = list(reserved.values()) + \
     ['TYPE', 'ID',
      'INT_VAL', 'REAL_VAL', 'QUOTED_STRING',
      'DOT', 'COLON', 'SEMICOLON', 'COMMA', 'EQUAL',
      'EQ', 'NEQ', 'GT', 'GET', 'LT', 'LET',
+     'ADD', 'SUB', 'MULT', 'DIV',
      'O_ROUND', 'C_ROUND', 'O_SQUARE', 'C_SQUARE']
 
 
-# Token definitions
-
-#def t_MAP(t):
-#    r'Map'
-#    return t
-
-#def t_HORDE(t):
-#    r'Horde'
-#    return t
-
-#def t_MONSTER(t):
-#    r'Monster'
-#    return t
-
-#def t_PLAYER(t):
-#    r'Player'
-#    return t
-
-#t_ID = r'[A-Za-z][A-Za-z0-9_-]*'
-#t_TYPE = r'Map|Horde|Monster|Player'
-
+# Tokens definition
 def t_ID(t):
     r'[A-Za-z][A-Za-z0-9_-]*'
     if t.value in reserved.keys():
         t.type = reserved[t.value]
     elif t.value in types:
         t.type = 'TYPE'
-    #elif t.value in methods:
-    #    t.type = 'METHOD'
     return t
+
+
+def t_REAL_VAL(t):
+    r'[0-9]*\.[0-9]+'
+    t.value = float(t.value)
+    return t
+
 
 def t_INT_VAL(t):
     r'[0-9]+'
     t.value = int(t.value)
     return t
 
-def t_REAL_VAL(t):
-    r'[0-9]*\.[0.9]+'
-    t.value = float(t.value)
-    return t
 
-# TODO: check
 def t_QUOTED_STRING(t):
     r'"[^"]*"'
     t.value = str(t.value[1:-1])
@@ -114,6 +88,11 @@ t_C_ROUND = r'\)'
 t_O_SQUARE = r'\['
 t_C_SQUARE = r'\]'
 
+t_ADD = r'\+'
+t_SUB = r'\-'
+t_MULT = r'\*'
+t_DIV = r'/'
+
 def t_comment(t):
     r'\#[^\n]*'
     pass
@@ -132,3 +111,4 @@ def t_error(t):
 # Build the lexer
 #lex.lex(debug=True)
 lex.lex()
+lex.startLinePos=0

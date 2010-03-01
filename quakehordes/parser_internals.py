@@ -122,6 +122,28 @@ class QHDLTypeError(Exception):
              self.typeExpected, self.typeFound)
 
 
+class QHDLValueError(Exception):
+
+    def __init__(self, name, lineno, linepos,
+                 argNotInList=False, divByZero=False):
+        super(QHDLValueError, self).__init__()
+        self.name = name
+        self.lineno = lineno
+        self.linepos = linepos
+        self.argNotInList = argNotInList
+        self.divByZero = divByZero
+
+    def __str__(self):
+        if self.argNotInList:
+            reason = "argument not in list"
+        elif self.divByZero:
+            reason = "division by zero"
+        else:
+            reason = ""
+        return "Invalid value on %d:%d: %s" % \
+            (self.lineno, self.linepos, reason)
+
+
 class QHDLAttrError(Exception):
 
     def __init__(self, _type, attrName, lineno, linepos,
@@ -278,7 +300,7 @@ class RvalNode(AstNode):
 
         except (TypeError, AttributeError):
             # TODO: how to (and where) handle types?
-            value = self.childs
+            value = self.childs[0]
             if type(value) is int:
                 _type = 'int'
             elif type(value) is float:
@@ -396,7 +418,15 @@ class MethodCallNode(AstNode):
             #args.append(argSym)
             
             # and call the method for each arg
-            method(var.value, argSym)
+            try:
+                method(var.value, argSym)
+            except ValueError:
+                # Ignore the call if the argument is not in
+                # list for delection calls 
+                raise QHDLValueError(argSym.id,
+                                     arg.lineno,
+                                     arg.linepos, 
+                                     argNotInList=True)
 
         # Finally, call the method
         #return method(var.value,
@@ -469,6 +499,69 @@ class CondNode(AstNode):
                 retVal = op(val1)
 
         return retVal
+
+
+class ExpNode(AstNode):
+    
+    TYPES = ['int', 'real']
+
+    def action(self, scope):
+
+        v1 = self.childs[0]
+        v2 = self.childs[1]
+        op = self.childs[2]
+        v1pos = self.childs[3:5]
+        v2pos = self.childs[5:]
+
+        # Retrieve values
+        try:
+            val1 = v1.action(scope)
+        except AttributeError:
+            if type(v1) is int:
+                _type = 'int'
+            elif type(v1) is float:
+                _type = 'real'
+            else:
+                raise QHDLTypeError(str(type(v1)),
+                                    'int, float',
+                                    v1pos[0], v1pos[1])
+            val1 = Symbol('tmp', _type, v1)
+
+        try:
+            val2 = v2.action(scope)
+        except AttributeError:
+            if type(v2) is int:
+                _type = 'int'
+            elif type(v2) is float:
+                _type = 'real'
+            else:
+                raise QHDLTypeError(str(type(v2)),
+                                    'int, float',
+                                    v2pos[0], v2pos[1])
+            val2 = Symbol('tmp', _type, v2)
+
+        # Apply operator on values
+        if val1.type in ExpNode.TYPES and \
+                val2.type in ExpNode.TYPES and \
+                val1.type == val2.type:
+            try:
+                retVal = op(val1.value, val2.value)
+            except ZeroDivisionError:
+                # TODO: how to manage zero division error?
+                raise QHDLValueError(val2.id, v2pos[0],
+                                     v2pos[1], 
+                                     divByZero=True)
+        else:
+            raise QHDLTypeError(val2.type,
+                                val1.type,
+                                v2pos[0], v2pos[1])
+
+        if type(retVal) is int:
+            _type = 'int'
+        else:
+            _type = 'real'
+        
+        return Symbol('tmp', _type, retVal)
 
 
 class IfNode(AstNode):

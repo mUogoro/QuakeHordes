@@ -13,7 +13,7 @@ from quakehordes import ENV, Map, BuildQHDLParser
 from quakehordes import \
     QHDLLexError, QHDLSyntaxError, \
     QHDLTypeError, QHDLAttrError, QHDLIndexError, \
-    QHDLNameError
+    QHDLNameError, QHDLValueError
 from quakehordes import initLogger, log
 
 
@@ -140,7 +140,8 @@ def main():
                 ast.action(ENV)
             except (QHDLLexError, QHDLSyntaxError,
                     QHDLTypeError, QHDLAttrError,
-                    QHDLIndexError, QHDLNameError), e:
+                    QHDLIndexError, QHDLNameError,
+                    QHDLValueError), e:
                 print e
                 #print "Map generation aborted."
                 # Error executing the program. Skip to next
