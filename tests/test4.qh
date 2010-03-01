@@ -1,0 +1,97 @@
+# Another test which use arithmetich expression and print statement
+Map test4;
+test4.name = "test4";
+
+test4.width = 160;
+test4.height = 80;
+
+
+# Draw a cross of items
+Item items[];
+for each i in (1, 100):
+  if i*4 < test4.height:
+    Item ammo;
+    ammo.type = "ammo";
+    ammo.subType = "rockets";
+    ammo.x = test4.width/2;
+    ammo.y = i*4;
+    items.add(ammo);
+  end if
+  if i*4 < test4.width:
+    Item health;
+    health.size = "small";
+    health.x = i*4;
+    health.y = test4.height/2;
+    items.add(health);
+  end if
+end for
+
+test4.items = items;
+
+# Create four hordes
+Horde hordes[];
+
+# Horde 1: zombies
+Horde horde1;
+horde1.id = "horde1";
+horde1.x = test4.width/4;
+horde1.y = test4.height/4;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "zombie";  
+  horde1.monsters.add(foo);
+end for
+
+# Horde 2: ogres
+Horde horde2;
+horde2.id = "horde2";
+horde2.x = test4.width/4;
+horde2.y = test4.height/4*3;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "ogre";
+  horde2.monsters.add(foo);
+end for
+
+# Horde 3: demons
+Horde horde3;
+horde3.id = "horde3";
+horde3.x = test4.width/4*3;
+horde3.y = test4.height/4;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "demon1";
+  horde3.monsters.add(foo);
+end for
+
+# Horde 4: dogs
+Horde horde4;
+horde4.id = "horde4";
+horde4.x = test4.width/4*3;
+horde4.y = test4.height/4*3;
+
+for each i in (0, 30):
+  Monster foo;
+  foo.type = "dog";
+  horde4.monsters.add(foo);
+end for
+
+# Set the same fire point for all hordes
+hordes.add(horde1, horde2, horde3, horde4);
+for each hordes as horde:
+  horde.fireX = test4.width/2;
+  horde.fireY = test4.height/2;
+end for
+
+test4.hordes = hordes;
+
+# Finally, put a rocket launcher in the player start point
+Item rockLaunch;
+rockLaunch.type = "weapon";
+rockLaunch.subType = "rocketlauncher";
+rockLaunch.x = test4.width/2;
+rockLaunch.y = test4.height/2;
+test4.items.add(rockLaunch);
