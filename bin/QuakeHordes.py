@@ -114,7 +114,8 @@ def main():
 
     builtMaps = 0
     for src in sources:
-        i = 1
+      i = 1
+      try:
         # Parse and execute each specified file
         with open(src, 'r') as f:
 
@@ -187,6 +188,9 @@ def main():
             # Come back to previous directory
             chdir(currDir)
             log("Done", 'info')
+
+      except IOError:
+          pass
 
     if builtMaps:
         return 0
